@@ -15,11 +15,14 @@
 #include "cwellknown.h"
 #include "rrt.h"
 // UDP
-#include "uecho.h"
+//#include "uecho.h"
 #include "uinject.h"
 #include "userialbridge.h"
 #include "uexpiration.h"
 #include "uexpiration_monitor.h"
+
+#include "techo.h"
+#include "s_techo.h"
 
 //=========================== variables =======================================
 
@@ -35,10 +38,10 @@ void openapps_init(void) {
    
    // CoAP
    //c6t_init();
-   cinfo_init();
-   cleds__init();
+   //cinfo_init();
+   //cleds__init();
    //cjoin_init();
-   cwellknown_init();
+   //cwellknown_init();
    //rrt_init();
    
    // UDP
@@ -47,4 +50,7 @@ void openapps_init(void) {
    //userialbridge_init();
    //uexpiration_init();
    //umonitor_init();
+
+   //techo_init();
+   s_techo_init();
 }
