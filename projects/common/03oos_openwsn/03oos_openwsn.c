@@ -10,6 +10,10 @@
 #include "opendefs.h"
 
 int mote_main(void) {
+
+   unsigned char memory_buf[18000];
+   mbedtls_memory_buffer_alloc_init( memory_buf, sizeof(memory_buf) );
+
    
    // initialize
    board_init();
