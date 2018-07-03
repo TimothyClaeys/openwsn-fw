@@ -16,7 +16,7 @@
 #include "opentimers.h"
 #include "opentimers.h"
 //-- 02a-TSCH
-#include "adaptive_sync.h"
+//#include "adaptive_sync.h"
 #include "IEEE802154E.h"
 //-- 02b-RES
 #include "schedule.h"

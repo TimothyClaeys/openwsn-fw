@@ -221,7 +221,7 @@ enum {
    ERR_WRONG_CELLTYPE                  = 0x18, // wrong celltype {0} at slotOffset {1}
    ERR_IEEE154_UNSUPPORTED             = 0x19, // unsupported IEEE802.15.4 parameter {1} at location {0}
    ERR_DESYNCHRONIZED                  = 0x1a, // got desynchronized at slotOffset {0}
-   ERR_SYNCHRONIZED                    = 0x1b, // synchronized at slotOffset {0}
+   ERR_SYNCHRONIZED                    = 0x1b, // [BG-GREEN][BOLD][WHITE]synchronized at slotOffset {0}[END]
    ERR_LARGE_TIMECORRECTION            = 0x1c, // large timeCorr.: {0} ticks (code loc. {1})
    ERR_WRONG_STATE_IN_ENDFRAME_SYNC    = 0x1d, // wrong state {0} in end of frame+sync
    ERR_WRONG_STATE_IN_STARTSLOT        = 0x1e, // wrong state {0} in startSlot, at slotOffset {1}
@@ -262,7 +262,7 @@ enum {
    ERR_UNSUPPORTED_FORMAT              = 0x40, // the received packet format is not supported {code location {0}}
    ERR_UNSUPPORTED_METADATA            = 0x41, // the metadata type is not suppored
    //l3
-   ERR_6LORH_DEADLINE_EXPIRED	       = 0x42, // the received packet has expired
+   ERR_6LORH_DEADLINE_EXPIRED	         = 0x42, // the received packet has expired
    ERR_6LORH_DEADLINE_DROPPED          = 0x43, // packet expiry time reached, dropped
    // join and OSCOAP
    ERR_JOINED                          = 0x44, // node joined
