@@ -16,6 +16,8 @@
 
 //=========================== module variables ================================
 
+extern uint32_t __SRAM_seed;
+
 typedef struct {
    uint16_t shift_reg;  // Galois shift register used to obtain a pseudo-random number
 } random_vars_t;
