@@ -115,7 +115,7 @@ void ieee154e_init(void) {
     memset(&ieee154e_dbg,0,sizeof(ieee154e_dbg_t));
     
     // set singleChannel to 0 to enable channel hopping.
-    ieee154e_vars.singleChannel     = 0;
+    ieee154e_vars.singleChannel     = 26;
     ieee154e_vars.isAckEnabled      = TRUE;
     ieee154e_vars.isSecurityEnabled = FALSE;
     ieee154e_vars.slotDuration      = TsSlotDuration;
@@ -540,7 +540,7 @@ port_INLINE void activity_synchronize_newSlot(void) {
         radio_rfOff();
         
         // update record of current channel
-        ieee154e_vars.freq = (openrandom_get16b()&0x0F) + 11;
+        ieee154e_vars.freq = 26; //(openrandom_get16b()&0x0F) + 11;
         
         // configure the radio to listen to the default synchronizing channel
         radio_setFrequency(ieee154e_vars.freq);
@@ -1191,10 +1191,16 @@ port_INLINE void activity_ti3(void) {
         isr_ieee154e_timer                                // callback
     );
     // radiotimer_schedule(DURATION_tt3);
-    
+ 
     // give the 'go' to transmit
     radio_txNow();
 #endif
+    //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_OPENTLS ){
+    openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, ieee154e_vars.localCopyForTransmission.creator);
+    //}
+    //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_ICMPv6RPL && icmpv6rpl_busySendingDAO() == TRUE ){
+    //  openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, 0);
+    //}
 }
 
 port_INLINE void activity_tie2(void) {
@@ -1752,6 +1758,8 @@ port_INLINE void activity_ri5(PORT_TIMER_WIDTH capturedTime) {
     // declare ownership over that packet
     ieee154e_vars.dataReceived->creator = COMPONENT_IEEE802154E;
     ieee154e_vars.dataReceived->owner   = COMPONENT_IEEE802154E;
+
+    //openserial_printInfo( COMPONENT_IEEE802154E, ERR_RECV, ieee154e_vars.asn.bytes0and1, scheduler_getTaskCount() );
 
     /*
     The do-while loop that follows is a little parsing trick.
