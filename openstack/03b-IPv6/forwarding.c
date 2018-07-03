@@ -9,6 +9,7 @@
 #include "icmpv6.h"
 #include "icmpv6rpl.h"
 #include "openudp.h"
+#include "opentcp.h"
 #include "debugpins.h"
 #include "scheduler.h"
 
@@ -244,8 +245,10 @@ void forwarding_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
          case IANA_ICMPv6:
             icmpv6_sendDone(msg,error);
             break;
-         default:
-            
+         case IANA_TCP:
+            opentcp_sendDone(msg,error);
+            break;
+         default: 
             // log error
             openserial_printCritical(
                COMPONENT_FORWARDING,
@@ -315,6 +318,9 @@ void forwarding_receive(
             break;
         case IANA_ICMPv6:
             icmpv6_receive(msg);
+            break; 
+        case IANA_TCP:
+            opentcp_receive(msg);
             break;
         default:
             // log error

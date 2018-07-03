@@ -66,6 +66,7 @@ enum {
 enum {
    IANA_IPv6HOPOPT                     = 0x00,
    IANA_UDP                            = 0x11,
+   IANA_TCP                            = 0x06,
    IANA_IPv6ROUTING                    = 0x03,
    IANA_IPv6ROUTE                      = 0x2b,//used for source routing
    IANA_ICMPv6                         = 0x3a,
@@ -87,7 +88,7 @@ enum {
 enum {
    //TCP
    WKP_TCP_HTTP                        =      80,
-   WKP_TCP_ECHO                        =       7,
+   WKP_TCP_ECHO                        =    9005,
    //UDP
    WKP_UDP_COAP                        =    5683,
    WKP_UDP_ECHO                        =       7,
@@ -155,6 +156,7 @@ enum {
    COMPONENT_ICMPv6RPL                 = 0x16,
    //TRAN
    COMPONENT_OPENUDP                   = 0x17,
+   COMPONENT_OPENTCP                   = 0x30,
    COMPONENT_OPENCOAP                  = 0x18,
    // applications
    COMPONENT_C6T                       = 0x19,
@@ -174,6 +176,10 @@ enum {
    COMPONENT_CJOIN                     = 0x27,
    COMPONENT_OPENOSCOAP                = 0x28,
    COMPONENT_CINFRARED                 = 0x29,
+   COMPONENT_TECHO                     = 0x2a,
+   COMPONENT_MSF                       = 0x2b,
+   COMPONENT_OPENTLS                   = 0x2c,
+   COMPONENT_MBEDTLS                   = 0x2d,
 };
 
 /**
@@ -265,6 +271,54 @@ enum {
    ERR_REPLAY_FAILED                   = 0x47, // OSCOAP replay protection failed
    ERR_DECRYPTION_FAILED               = 0x48, // OSCOAP decryption and tag verification failed
    ERR_ABORT_JOIN_PROCESS              = 0x49, // Aborted join process {code location {0}}
+   // apps
+   ERR_SENDING_ECHO_REQ                = 0x50, // Sending an udp or tcp echo request @ ASN: {0}
+   ERR_RECEIVED_ECHO_REQ               = 0x51, // Sending an udp or tcp echo request
+   ERR_RECV                            = 0x52, // [CYAN]Received packet @ asn: {0}, role: {1}[END]
+   ERR_SEND                            = 0x53, // [CYAN]Sending packet @ asn: {0}, role: {1}[END]
+   ERR_DEBUG                           = 0x54, // Log message {0} -- {1}
+   ERR_TCP_TIMER_RESET                 = 0x55, // Timeout on TCP connection
+   ERR_TCP_IN_CLOSED_STATE             = 0x56, // TCP connection is closed
+   ERR_TCP_SCHEDULE_TIMEOUT            = 0x57, // Scheduling timeout, timerId {0}
+   ERR_TCP_RESETED                     = 0x58, // TCP has been reseted
+   ERR_TCP_CONNECTING                  = 0x59, // initiating TCP connection on port {0}
+   ERR_TCP_CONN_ESTABLISHED            = 0x61, // [GREEN]TCP connection established, dest. port: {0}[END]
+   ERR_TCP_SENDING_DATA                = 0x62, // sending TCP data
+   ERR_TLS_SENDING_FRAGMENT            = 0x63, // sending TLS fragment @ asn {0}
+   ERR_TLS_INIT_FAILED                 = 0x64, // failed to initialize OPENTLS
+   ERR_WRONG_TLS_STATE                 = 0x65, // [RED]wrong TLS state: {0}[END]
+   ERR_TLS_TRANSMISSION_FAILED         = 0x66, // [RED]TLS fragment transmission failed[END]
+   ERR_TLS_RECV_BYTES                  = 0x67, // [GREEN]bytes in receive buffer: {0} @ asn: {1}[END]
+   ERR_TCP_CHANGING_STATE              = 0x68, // TCP state change: {0} --> {1}
+   ERR_TECHO_RECV_DATA                 = 0x69, // techo data received
+   ERR_TECHO_FAILED_SEND               = 0x6a, // techo sending failed
+   ERR_TECHO_SENDING_DATA              = 0x6b, // techo sending data
+   ERR_REQUESTING_CLIENT_HELLO         = 0x6c, // [BLUE]request a client hello message, state: {0}, next state in: {1}[END]
+   ERR_SENDING_CLIENT_HELLO            = 0x6d, // [BLUE]sending client hello message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_HELLO            = 0x6e, // [BLUE]parsing server hello message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_CERT             = 0x6f, // [BLUE]processing server certificate, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_KEX              = 0x70, // [BLUE]processing server key exchange message, state: {0}, next state in: {1}[END]
+   ERR_CERTIFICATE_REQUEST             = 0x71, // [BLUE]process possible certificate request server, state: {0}, next state in: {1}[END]
+   ERR_TLS_HANDSHAKE_FAILED            = 0x72, // [RED]TLS handshake failed with error code {0} in state {1}[END]
+   ERR_TLS_TRUSTED_CERT                = 0x73, // [MAGENTA]skip trusted certificate[END]
+   ERR_TLS_STATE_DONE                  = 0x74, // [BG-GREEN][BOLD][WHITE]DONE![END]
+   ERR_PARSING_SERVER_HELLO_DONE       = 0x75, // [BLUE]processing server hello done, state: {0}, next state in: {1}[END]
+   ERR_PREP_CLIENT_CERT                = 0x76, // [BLUE]preparing possible client cert, state: {0}, next state in: {1}[END]
+   ERR_SENDING_CLIENT_KEX              = 0x77, // [BLUE]sending client key exchange, state: {0}, next state in: {1}[END]
+   ERR_MBEDTLS_ERROR                   = 0x78, // [RED]MBEDTLS failed with error codes: {0} - {1}[END]
+   ERR_TCP_RETRANSMISSION              = 0x79, // retransmission attempt
+   ERR_UPDATE_READ_BUFFER              = 0x7a, // updating receive buffer, read: {0}, left: {1}
+   ERR_CERT_VERIFY                     = 0x7b, // [BLUE]possibly verify certificate, state: {0}, next state in: {1}[END]
+   ERR_CLIENT_CHANGE_CIPHER_SPEC       = 0x7c, // [BLUE]client change cipher spec, state: {0}, next state in: {1}[END]
+   ERR_CLIENT_DONE                     = 0x7d, // [BLUE]client done, state: {0}, next state in: {1}[END]
+   ERR_SERVER_CHANGE_CIPHER_SPEC       = 0x7e, // [BLUE]server change cipher spec, state: {0}, next state in: {1}[END]
+   ERR_SERVER_DONE                     = 0x7f, // [BLUE]server done, state: {0}, next state in: {1}[END]
+   ERR_FLUSH_BUFFERS                   = 0x80, // [BLUE]flushing buffers, state: {0}, next state in: {1}[END]
+   ERR_HANDSHAKE_WRAPUP                = 0x81, // [BLUE]wrapping up handshake, state: {0}, next state in: {1}[END]
+   ERR_WAITING_FOR_DATA                = 0x82, // [YELLOW]waiting for handshake data[END]
+   ERR_WAITING_FOR_TX                  = 0x83, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
+   ERR_BUSY_IN_STATE                   = 0x84, // [YELLOW]still processing previous state: {0}, output left: {1}[END]
+   ERR_TLS_MEM_ALLOC_FAILED            = 0x85, // [RED]heap memory allocation failed (no more memory available)[END]
 };
 
 //=========================== typedef =========================================
