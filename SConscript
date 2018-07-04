@@ -233,7 +233,7 @@ elif env['toolchain']=='armgcc':
         env.Append(LINKFLAGS     = '-nostartfiles')
         env.Append(LINKFLAGS     = '--specs=nosys.specs')
         env.Append(LINKFLAGS     = '--specs=nano.specs')
-        env.Append(LINKFLAGS     = '-Wl,-Map,output.map')
+        env.Append(LINKFLAGS     = '-Wl,-Map,output.map,--verbose')
         env.Append(LINKFLAGS     = '-mcpu=cortex-m3')
         env.Append(LINKFLAGS     = '-mthumb')
         env.Append(LINKFLAGS     = '-g3')
