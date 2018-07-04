@@ -209,7 +209,7 @@ elif env['toolchain']=='armgcc':
         
         # compiler (C)
         env.Replace(CC           = 'arm-none-eabi-gcc')
-        env.Append(CCFLAGS       = '-O3')
+        env.Append(CCFLAGS       = '-Os')
         env.Append(CCFLAGS       = '-Wall')
         env.Append(CCFLAGS       = '-fstack-usage')
         env.Append(CCFLAGS       = '-Wa,-adhlns=${TARGET.base}.lst')
@@ -233,7 +233,7 @@ elif env['toolchain']=='armgcc':
         env.Append(LINKFLAGS     = '-nostartfiles')
         env.Append(LINKFLAGS     = '--specs=nosys.specs')
         env.Append(LINKFLAGS     = '--specs=nano.specs')
-        env.Append(LINKFLAGS     = '-Wl,-Map,output.map')
+        env.Append(LINKFLAGS     = '-Wl,-Map,output.map,--verbose')
         env.Append(LINKFLAGS     = '-mcpu=cortex-m3')
         env.Append(LINKFLAGS     = '-mthumb')
         env.Append(LINKFLAGS     = '-g3')
