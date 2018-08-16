@@ -129,7 +129,7 @@ uint8_t opentls_internal_fragment( const unsigned char *buf, int16_t length ) {
    pkt->creator = COMPONENT_OPENTLS;
    pkt->owner   = COMPONENT_OPENTLS;
    
-   for(int i=0; i<10; i++){
+   for(int i=0; i<5; i++){
       // look for a free spot in the fragment buffer
       if ( opentls_vars.fragmentBuf[i].fragment == NULL ) {
          opentls_vars.fragmentBuf[i].fragment = pkt;
