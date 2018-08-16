@@ -1,5 +1,6 @@
 #include "opendefs.h"
 #include "iphc.h"
+#include "frag.h"
 #include "packetfunctions.h"
 #include "idmanager.h"
 #include "openserial.h"
@@ -221,7 +222,7 @@ owerror_t iphc_sendFromForwarding(
         *((uint8_t*)(msg->payload)) = PAGE_DISPATCH_NO_1;
     }
     
-    return sixtop_send(msg);
+    return frag_fragment_packet(msg);
 }
 
 //send from bridge: 6LoWPAN header already added by OpenLBR, send as is

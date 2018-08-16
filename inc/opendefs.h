@@ -180,6 +180,7 @@ enum {
    COMPONENT_MSF                       = 0x2b,
    COMPONENT_OPENTLS                   = 0x2c,
    COMPONENT_MBEDTLS                   = 0x2d,
+   COMPONENT_FRAG                      = 0x2e,
 };
 
 /**
@@ -319,6 +320,7 @@ enum {
    ERR_WAITING_FOR_TX                  = 0x83, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
    ERR_BUSY_IN_STATE                   = 0x84, // [YELLOW]still processing previous state: {0}, output left: {1}[END]
    ERR_TLS_MEM_ALLOC_FAILED            = 0x85, // [RED]heap memory allocation failed (no more memory available)[END]
+   ERR_TX_6LOWPAN_FRAGMENT_FAILED      = 0x86, // [RED]Transmission of 6LowPAN fragment failed[END]
 };
 
 //=========================== typedef =========================================
@@ -366,8 +368,8 @@ typedef struct {
    uint8_t       length;                                        // length in bytes of the payload
    //l7
    uint16_t      max_delay;                      // Max delay in milliseconds before which the packet should be delivered to the receiver
-   bool					 orgination_time_flag;
-   bool 				 drop_flag;
+   bool			  orgination_time_flag;
+   bool 			  drop_flag;
    //l4
    uint8_t       l4_protocol;                                   // l4 protocol to be used
    bool          l4_protocol_compressed;                        // is the l4 protocol header compressed?

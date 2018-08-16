@@ -15,6 +15,7 @@
 #include "IEEE802154_security.h"
 #include "idmanager.h"
 #include "schedule.h"
+#include "frag.h"
 
 //=========================== define ==========================================
 
@@ -452,7 +453,7 @@ void task_sixtopNotifSendDone(void) {
             break;
         default:
             // send the rest up the stack
-            iphc_sendDone(msg,msg->l2_sendDoneError);
+            frag_sendDone(msg,msg->l2_sendDoneError);
             break;
     }
 }
@@ -517,7 +518,8 @@ void task_sixtopNotifReceive(void) {
                 break;
             }
             // send to upper layer
-            iphc_receive(msg);
+            //iphc_receive(msg);
+            frag_receive(msg);
         } else {
             // free up the RAM
             openqueue_freePacketBuffer(msg);

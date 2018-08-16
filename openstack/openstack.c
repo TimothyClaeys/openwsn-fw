@@ -26,6 +26,7 @@
 //-- 03a-IPHC
 #include "openbridge.h"
 #include "iphc.h"
+#include "frag.h"
 //-- 03b-IPv6
 #include "forwarding.h"
 #include "icmpv6.h"
@@ -68,6 +69,7 @@ void openstack_init(void) {
    //-- 03a-IPHC
    openbridge_init();
    iphc_init();
+   frag_init();
    //-- 03b-IPv6
    forwarding_init();
    icmpv6_init();

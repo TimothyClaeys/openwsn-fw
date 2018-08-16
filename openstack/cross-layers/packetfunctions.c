@@ -352,6 +352,42 @@ void packetfunctions_duplicatePacket(OpenQueueEntry_t* dst, OpenQueueEntry_t* sr
    dst->l4_payload = dst->payload + (src->l4_payload - src->payload);
 }
 
+void packetfunctions_duplicatePartialPacket(OpenQueueEntry_t *dst, OpenQueueEntry_t *src, uint8_t payload_length){
+   dst->creator                  = src->creator;                                   
+   dst->owner                    = src->owner;
+   dst->l2_nextORpreviousHop     = src->l2_nextORpreviousHop;
+   dst->l2_securityLevel         = src->l2_securityLevel;       
+   dst->l2_keyIdMode             = src->l2_keyIdMode;           
+   dst->l2_keyIndex              = src->l2_keyIndex;            
+   dst->l2_keySource             = src->l2_keySource;           
+   dst->l2_authenticationLength  = src->l2_authenticationLength;
+   dst->commandFrameIdentifier   = src->commandFrameIdentifier; 
+   dst->l2_FrameCounter          = src->l2_FrameCounter;                              
+   dst->l3_destinationAdd        = src->l3_destinationAdd;
+   dst->l3_sourceAdd             = src->l3_sourceAdd;
+   dst->l2_sixtop_returnCode     = src->l2_sixtop_returnCode;   
+   dst->l2_ASNpayload            = src->l2_ASNpayload;         
+   dst->l2_joinPriority          = src->l2_joinPriority;       
+   dst->l2_IEListPresent         = src->l2_IEListPresent;      
+   dst->l2_payloadIEpresent      = src->l2_payloadIEpresent;   
+   dst->l2_joinPriorityPresent   = src->l2_joinPriorityPresent;
+   dst->l2_isNegativeACK         = src->l2_isNegativeACK;      
+                                
+   memcpy((uint8_t*)dst->payload - payload_length, src->payload, payload_length);
+   
+   // update pointers
+   src->payload += payload_length;
+   src->length  -= payload_length;
+   dst->payload -= payload_length;
+   dst->length  += payload_length;
+   
+   if ( (uint8_t*)(dst->payload) < (uint8_t*)(dst->packet) ) {
+      openserial_printCritical(COMPONENT_PACKETFUNCTIONS,ERR_HEADER_TOO_LONG,
+                            (errorparameter_t)0,
+                            (errorparameter_t)dst->length);
+   }
+}
+
 //======= CRC calculation
 
 void packetfunctions_calculateCRC(OpenQueueEntry_t* msg) {
