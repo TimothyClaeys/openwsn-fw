@@ -353,7 +353,6 @@ void packetfunctions_duplicatePacket(OpenQueueEntry_t* dst, OpenQueueEntry_t* sr
 }
 
 void packetfunctions_duplicatePartialPacket(OpenQueueEntry_t *dst, OpenQueueEntry_t *src, uint8_t payload_length){
-   dst->creator                  = src->creator;                                   
    dst->owner                    = src->owner;
    dst->l2_nextORpreviousHop     = src->l2_nextORpreviousHop;
    dst->l2_securityLevel         = src->l2_securityLevel;       
@@ -372,7 +371,9 @@ void packetfunctions_duplicatePartialPacket(OpenQueueEntry_t *dst, OpenQueueEntr
    dst->l2_payloadIEpresent      = src->l2_payloadIEpresent;   
    dst->l2_joinPriorityPresent   = src->l2_joinPriorityPresent;
    dst->l2_isNegativeACK         = src->l2_isNegativeACK;      
-                                
+   
+   dst->l4_protocol              = src->l4_protocol;
+                     
    memcpy((uint8_t*)dst->payload - payload_length, src->payload, payload_length);
    
    // update pointers

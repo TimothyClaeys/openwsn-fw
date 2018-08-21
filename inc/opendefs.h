@@ -36,7 +36,7 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define LENGTH_ADDR64b   8
 #define LENGTH_ADDR128b  16
 
-#define MAXNUMNEIGHBORS  30
+#define MAXNUMNEIGHBORS  5
 
 // maximum celllist length
 #define CELLLIST_MAX_LEN 5
@@ -221,7 +221,7 @@ enum {
    // l2a
    ERR_WRONG_CELLTYPE                  = 0x18, // wrong celltype {0} at slotOffset {1}
    ERR_IEEE154_UNSUPPORTED             = 0x19, // unsupported IEEE802.15.4 parameter {1} at location {0}
-   ERR_DESYNCHRONIZED                  = 0x1a, // got desynchronized at slotOffset {0}
+   ERR_DESYNCHRONIZED                  = 0x1a, // [BOLD][RED]got desynchronized at slotOffset {0}[END]
    ERR_SYNCHRONIZED                    = 0x1b, // [BG-GREEN][BOLD][WHITE]synchronized at slotOffset {0}[END]
    ERR_LARGE_TIMECORRECTION            = 0x1c, // large timeCorr.: {0} ticks (code loc. {1})
    ERR_WRONG_STATE_IN_ENDFRAME_SYNC    = 0x1d, // wrong state {0} in end of frame+sync
@@ -320,7 +320,16 @@ enum {
    ERR_WAITING_FOR_TX                  = 0x83, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
    ERR_BUSY_IN_STATE                   = 0x84, // [YELLOW]still processing previous state: {0}, output left: {1}[END]
    ERR_TLS_MEM_ALLOC_FAILED            = 0x85, // [RED]heap memory allocation failed (no more memory available)[END]
-   ERR_TX_6LOWPAN_FRAGMENT_FAILED      = 0x86, // [RED]Transmission of 6LowPAN fragment failed[END]
+   ERR_UPDATE_DAGRANK                  = 0x86, // [GREEN]Received DIO and update DAGRANK: {0}[END]
+   ERR_SEND_DAO                        = 0x87, // [GREEN]Sent DAO packet[END]
+   ERR_NEW_ENTRY                       = 0x88, // [GREEN]Added new neighbor: {0} to neighbor table.[END]
+   ERR_REMOVE_ENTRY                    = 0x89, // [YELLOW]Added new neighbor: {0} to neighbor table.[END]
+   ERR_BAD_RSSI                        = 0x8a, // [RED]Packet discarded, bad rssi: {0}[END]
+   ERR_INSUFFICIENT_TX                 = 0x8b, // [YELLOW]Don't update MyDagRank after DIO, insufficient TX[END]
+   ERR_TX_6LOWPAN_FRAGMENT_FAILED      = 0x8c, // [RED]Transmission of 6LowPAN fragment failed[END]
+   ERR_ALLOC_NUM_ENTRIES               = 0x8d, // [MAGENTA]Allocate openqueue entry, total entries {0}, creator {1} [END]
+   ERR_FREE_NUM_ENTRIES                = 0x8e, // [MAGENTA]Free openqueue entry, total entries {0}, creator {1} [END]
+   ERR_MISSING_FRAGS                   = 0x8f, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
 };
 
 //=========================== typedef =========================================
@@ -380,6 +389,8 @@ typedef struct {
    //l3
    open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack) 
    open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address 
+   //l2.5
+   bool          is_fragment;                                   // is set to TRUE when this packet was fragmented
    //l2
    owerror_t     l2_sendDoneError;                              // outcome of trying to send this packet
    open_addr_t   l2_nextORpreviousHop;                          // 64b IEEE802.15.4 next (down stack) or previous (up) hop address
@@ -420,6 +431,66 @@ typedef struct {
    uint8_t       packet[1+1+125+2+1];                           // 1B spi address, 1B length, 125B data, 2B CRC, 1B LQI
 } OpenQueueEntry_t;
 
+
+typedef struct {
+   //admin
+   uint8_t       creator;                                       // the component which called getFreePacketBuffer()
+   uint8_t       owner;                                         // the component which currently owns the entry
+   uint8_t*      payload;                                       // pointer to the start of the payload within 'packet'
+   uint8_t       length;                                        // length in bytes of the payload
+   //l7
+   uint16_t      max_delay;                      // Max delay in milliseconds before which the packet should be delivered to the receiver
+   bool					 orgination_time_flag;
+   bool 				 drop_flag;
+   //l4
+   uint8_t       l4_protocol;                                   // l4 protocol to be used
+   bool          l4_protocol_compressed;                        // is the l4 protocol header compressed?
+   uint16_t      l4_sourcePortORicmpv6Type;                     // l4 source port
+   uint16_t      l4_destination_port;                           // l4 destination port
+   uint8_t*      l4_payload;                                    // pointer to the start of the payload of l4 (used for retransmits)
+   uint8_t       l4_length;                                     // length of the payload of l4 (used for retransmits)
+   //l3
+   open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack) 
+   open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address 
+   //l2
+   owerror_t     l2_sendDoneError;                              // outcome of trying to send this packet
+   open_addr_t   l2_nextORpreviousHop;                          // 64b IEEE802.15.4 next (down stack) or previous (up) hop address
+   uint8_t       l2_frameType;                                  // beacon, data, ack, cmd
+   uint8_t       l2_dsn;                                        // sequence number of the received frame
+   uint8_t       l2_retriesLeft;                                // number Tx retries left before packet dropped (dropped when hits 0)
+   uint8_t       l2_numTxAttempts;                              // number Tx attempts
+   asn_t         l2_asn;                                        // at what ASN the packet was Tx'ed or Rx'ed
+   uint8_t*      l2_payload;                                    // pointer to the start of the payload of l2 (used for MAC to fill in ASN in ADV)
+   cellInfo_ht   l2_sixtop_celllist_add[CELLLIST_MAX_LEN];      // record celllist to be added and will be added when 6P response sendDone
+   cellInfo_ht   l2_sixtop_celllist_delete[CELLLIST_MAX_LEN];   // record celllist to be removed and will be removed when 6P response sendDone
+   uint16_t      l2_sixtop_frameID;                             // frameID in 6P message
+   uint8_t       l2_sixtop_messageType;                         // indicating the sixtop message type
+   uint8_t       l2_sixtop_command;                             // command of the received 6p request, recorded in 6p response
+   uint8_t       l2_sixtop_cellOptions;                         // celloptions, used when 6p response senddone. (it's the same with cellOptions in 6p request but with TX and RX bits have been flipped)
+   uint8_t       l2_sixtop_returnCode;                          // return code in 6P response
+   uint8_t*      l2_ASNpayload;                                 // pointer to the ASN in EB
+   uint8_t       l2_joinPriority;                               // the join priority received in EB
+   bool          l2_IEListPresent;                              // did have IE field?
+   bool          l2_payloadIEpresent;                           // did I have payload IE field
+   bool          l2_joinPriorityPresent;
+   bool          l2_isNegativeACK;                              // is the negative ACK?
+   int16_t       l2_timeCorrection;                             // record the timeCorrection and print out at endOfslot
+   //layer-2 security
+   uint8_t       l2_securityLevel;                              // the security level specified for the current frame
+   uint8_t       l2_keyIdMode;                                  // the key Identifier mode specified for the current frame
+   uint8_t       l2_keyIndex;                                   // the key Index specified for the current frame
+   open_addr_t   l2_keySource;                                  // the key Source specified for the current frame
+   uint8_t       l2_authenticationLength;                       // the length of the authentication field
+   uint8_t       commandFrameIdentifier;                        // used in case of Command Frames
+   uint8_t*      l2_FrameCounter;                               // pointer to the FrameCounter in the MAC header
+   //l1 (drivers)
+   uint8_t       l1_txPower;                                    // power for packet to Tx at
+   int8_t        l1_rssi;                                       // RSSI of received packet
+   uint8_t       l1_lqi;                                        // LQI of received packet
+   bool          l1_crc;                                        // did received packet pass CRC check?
+   //the packet
+   uint8_t       packet[300];                           // 1B spi address, 1B length, 125B data, 2B CRC, 1B LQI
+} OpenQueueLargeEntry_t;
 
 BEGIN_PACK
 typedef struct {

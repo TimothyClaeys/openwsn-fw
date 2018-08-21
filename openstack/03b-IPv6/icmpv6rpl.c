@@ -243,7 +243,6 @@ void icmpv6rpl_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
 */
 void icmpv6rpl_receive(OpenQueueEntry_t* msg) {
    uint8_t      icmpv6code;
-   
    // take ownership
    msg->owner      = COMPONENT_ICMPv6RPL;
    
@@ -399,6 +398,7 @@ void icmpv6rpl_updateMyDAGrankAndParentSelection(void) {
         } else {
             if (neighbors_reachedMinimalTransmission(icmpv6rpl_vars.ParentIndex)==FALSE){
                 // I havn't enough transmission to my parent, don't update.
+                openserial_printInfo(COMPONENT_ICMPv6RPL, ERR_INSUFFICIENT_TX, 0, 0);
                 return;
             }
             rankIncrease     = neighbors_getLinkMetric(icmpv6rpl_vars.ParentIndex);
@@ -475,6 +475,7 @@ void icmpv6rpl_updateMyDAGrankAndParentSelection(void) {
                 neighbors_getNeighborEui64(&addressToWrite,ADDR_64B,prevParentIndex);
             }
         }
+        openserial_printInfo(COMPONENT_ICMPv6RPL, ERR_UPDATE_DAGRANK, icmpv6rpl_vars.myDAGrank, 0);
     } else {
         // restore routing table as we found it on entry
         icmpv6rpl_vars.myDAGrank   = previousDAGrank;
@@ -967,6 +968,7 @@ void sendDAO(void) {
    if (icmpv6_send(msg)==E_SUCCESS) {
       icmpv6rpl_vars.busySendingDAO = TRUE;
       icmpv6rpl_vars.daoSent = TRUE;
+      openserial_printInfo(COMPONENT_ICMPv6RPL, ERR_SEND_DAO, 0, 0);
    } else {
       openqueue_freePacketBuffer(msg);
    }

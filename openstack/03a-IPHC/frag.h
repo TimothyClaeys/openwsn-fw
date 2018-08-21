@@ -20,6 +20,7 @@
 #define REASSEMBLE_BUFFER       5
 
 #define MAX_FRAGMENT_SIZE       64 
+#define DEFAULT_TAG_VALUE       0xFFFFFFFF
 
 typedef struct {
    uint16_t  dispatch_size_field;
@@ -38,6 +39,7 @@ struct fragment_t{
    uint16_t datagram_tag;
    uint8_t  datagram_offset;
    uint8_t fragmentLen;
+   bool TxFailed;
    OpenQueueEntry_t* pFragment;
    OpenQueueEntry_t* pTotalMsg;
 };

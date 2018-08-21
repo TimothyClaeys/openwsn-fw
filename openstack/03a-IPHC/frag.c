@@ -18,7 +18,7 @@ void frag_init(){
    
    // unspecified start value, wraps around at 65535
    frag_vars.tag = openrandom_get16b();
-   frag_vars.tag_to_be_dropped = 0xffffffff; 
+   frag_vars.tag_to_be_dropped = DEFAULT_TAG_VALUE; 
 
 }
 
@@ -55,6 +55,7 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
       
       if ( buf_loc == -1 ){
          // fragment buffer full
+         openqueue_freePacketBuffer(lowpan_fragment);
          return E_FAIL;
       }
     
@@ -64,6 +65,7 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
       frag_vars.fragmentBuf[buf_loc].datagram_tag = frag_vars.tag; 
       frag_vars.fragmentBuf[buf_loc].datagram_offset = frag_vars.current_offset; 
       frag_vars.fragmentBuf[buf_loc].fragmentLen = fragment_length; 
+      frag_vars.fragmentBuf[buf_loc].TxFailed = FALSE;
       frag_vars.fragmentBuf[buf_loc].pFragment = lowpan_fragment; 
       frag_vars.fragmentBuf[buf_loc].pTotalMsg = msg; 
 
@@ -73,7 +75,8 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
       frag_vars.current_offset += (fragment_length / 8);
  
       //claim the fragment
-      lowpan_fragment->owner = COMPONENT_FRAG;
+      lowpan_fragment->owner         = COMPONENT_FRAG;
+      lowpan_fragment->is_fragment   = TRUE;
       
       // construct first fragment
       packetfunctions_reserveHeaderSize(lowpan_fragment, sizeof(first_frag_t));
@@ -106,18 +109,26 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
             }
          }
          
+         if ( buf_loc == -1 ){
+            // fragment buffer full
+            openqueue_freePacketBuffer(lowpan_fragment);
+            return E_FAIL;
+         }
+         
          frag_vars.fragmentBuf[buf_loc].dispatch = DISPATCH_FRAG_SUBSEQ; 
          frag_vars.fragmentBuf[buf_loc].datagram_size = total_length; 
          frag_vars.fragmentBuf[buf_loc].datagram_tag = frag_vars.tag; 
          frag_vars.fragmentBuf[buf_loc].datagram_offset = frag_vars.current_offset; 
          frag_vars.fragmentBuf[buf_loc].fragmentLen = fragment_length; 
+         frag_vars.fragmentBuf[buf_loc].TxFailed = FALSE;
          frag_vars.fragmentBuf[buf_loc].pFragment = lowpan_fragment; 
          frag_vars.fragmentBuf[buf_loc].pTotalMsg = msg;
  
          packetfunctions_duplicatePartialPacket(lowpan_fragment, msg, fragment_length);
          
          //claim the fragment
-         lowpan_fragment->owner = COMPONENT_FRAG;
+         lowpan_fragment->owner         = COMPONENT_FRAG;
+         lowpan_fragment->is_fragment   = TRUE;
 
          // construct subsequent 6lowpan packet
          packetfunctions_reserveHeaderSize(lowpan_fragment, sizeof(subseq_frag_t));
@@ -136,46 +147,72 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
          }
       }
       
+      bool previousTxSucceeded = TRUE;     
+ 
       for(int i=0; i < FRAGMENT_BUFFER; i++){
          // find a fragmented 6lowpan packet and try to send it 
          if ( frag_vars.fragmentBuf[i].pFragment->owner == COMPONENT_FRAG ) {
-            if ( sixtop_send(frag_vars.fragmentBuf[i].pFragment) == E_FAIL ) {
+            if ( previousTxSucceeded == FALSE || sixtop_send(frag_vars.fragmentBuf[i].pFragment) == E_FAIL) {
                openserial_printError(COMPONENT_FRAG, ERR_TX_6LOWPAN_FRAGMENT_FAILED, 0, 0);
+               frag_vars.fragmentBuf[i].TxFailed = TRUE;
+               previousTxSucceeded = FALSE;
             }
          }
+      }
+      
+      if ( previousTxSucceeded == FALSE ){
+         for(int i=0; i < FRAGMENT_BUFFER; i++){
+            if( frag_vars.fragmentBuf[i].TxFailed == TRUE ){
+               openqueue_freePacketBuffer(frag_vars.fragmentBuf[i].pFragment);
+               memset(&frag_vars.fragmentBuf[i], 0, sizeof(fragment));
+            }
+         }
+         return E_FAIL;
       }
 
       return E_SUCCESS;
    } 
    else{
       // no fragmentation needed, send directly to sixtop layer
+      msg->is_fragment = FALSE;
       return sixtop_send(msg);
    }
 }
 
 void frag_sendDone(OpenQueueEntry_t* msg, owerror_t error){ 
-      uint8_t empty_slots = 0;
+      uint8_t fragments_left = 0;
+      uint32_t tag = DEFAULT_TAG_VALUE;
       OpenQueueEntry_t* total_msg;
 
-      for(int i=0; i < FRAGMENT_BUFFER; i++){
-         // free up the fragment that was just sent
-         if ( frag_vars.fragmentBuf[i].pFragment == msg ) {
-            openqueue_freePacketBuffer(msg);
-            // reset the entire entry
-            total_msg = frag_vars.fragmentBuf[i].pTotalMsg; 
-            memset(&frag_vars.fragmentBuf[i], 0, sizeof(fragment));
-            break; 
+      if ( msg->is_fragment ) {
+         for(int i=0; i < FRAGMENT_BUFFER; i++){
+            // free up the fragment that was just sent
+            if ( frag_vars.fragmentBuf[i].pFragment == msg ) {
+               openqueue_freePacketBuffer(msg);
+               // reset the entire entry
+               tag = frag_vars.fragmentBuf[i].datagram_tag;
+               total_msg = frag_vars.fragmentBuf[i].pTotalMsg; 
+               memset(&frag_vars.fragmentBuf[i], 0, sizeof(fragment));
+               break;
+            }
          }
-      }
+         
+         if ( tag == DEFAULT_TAG_VALUE ) {
+            openserial_printError(COMPONENT_FRAG, ERR_MISSING_FRAGS, 0, 0);
+         }
       
-      for(int i=0; i < FRAGMENT_BUFFER; i++){
-         // check if there are still fragments to be sent
-         if ( frag_vars.fragmentBuf[i].pFragment == NULL ) {
-            empty_slots++;
+         for(int i=0; i < FRAGMENT_BUFFER; i++){
+            // check if there are still fragments to be sent
+            if ( frag_vars.fragmentBuf[i].datagram_tag == tag ) {
+               fragments_left++;
+            }
          }
+      } 
+      else {
+         total_msg = msg;
       }
-
-      if ( empty_slots == FRAGMENT_BUFFER ){
+ 
+      if ( fragments_left == 0 ){    // always true when the message was not fragemt
          // all fragments were successfully send or the message was not fragmented in the first place
          iphc_sendDone(total_msg, error);
       }
@@ -189,6 +226,8 @@ void frag_receive(OpenQueueEntry_t* msg){
    
    msg->owner = COMPONENT_FRAG;
    // check if packet has the fragmentation dispatch header
+   
+   
    dispatch = (uint8_t)(packetfunctions_ntohs(msg->payload) >> 11);
    
    if ( dispatch == DISPATCH_FRAG_FIRST ){
@@ -206,7 +245,8 @@ void frag_receive(OpenQueueEntry_t* msg){
       packetfunctions_tossHeader(msg, sizeof(subseq_frag_t));
    }
    else{
-     // unrecognized header 
+      // unrecognized header, this packet is probably not fragmented, push to higher layer and return  
+      return iphc_receive(msg);
    }
   
    for(int i=0; i < REASSEMBLE_BUFFER; i++) {
@@ -233,8 +273,16 @@ void frag_receive(OpenQueueEntry_t* msg){
          received_bytes += frag_vars.reassembleBuf[i].fragmentLen;
          if ( total_wanted_bytes == received_bytes ) {
             do_reassemble = TRUE;
-            break;
          }
+      }
+      else if ( frag_vars.reassembleBuf[i].pFragment != NULL && tag > ( frag_vars.reassembleBuf[i].datagram_tag + 4 ) ) {
+         // this fragment is part of an incomplete message, probably because another fragment from the same message got dropped,
+         // remove this
+         openqueue_freePacketBuffer(frag_vars.reassembleBuf[i].pFragment);
+         memset(&frag_vars.reassembleBuf[i], 0, sizeof(fragment));
+      }
+      else{
+         //packet from the future? Can happen when datagram_tag wraps around
       }
    }
    

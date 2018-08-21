@@ -666,8 +666,13 @@ void registerNewNeighbor(open_addr_t* address,
       while(i<MAXNUMNEIGHBORS) {
          if (neighbors_vars.neighbors[i].used==FALSE) {
             if (rssi < BADNEIGHBORMAXRSSI){
+                openserial_printInfo(COMPONENT_NEIGHBORS, ERR_BAD_RSSI, 65535 - rssi + 1, 0);
                 break;
             }
+            
+            uint16_t addr_new_neighbor = address->addr_64b[6] << 8 | address->addr_64b[7];
+            openserial_printInfo(COMPONENT_NEIGHBORS, ERR_NEW_ENTRY, addr_new_neighbor,  0);
+            
             // add this neighbor
             neighbors_vars.neighbors[i].used                   = TRUE;
             neighbors_vars.neighbors[i].insecure               = insecure;
@@ -714,6 +719,10 @@ bool isNeighbor(open_addr_t* neighbor) {
 }
 
 void removeNeighbor(uint8_t neighborIndex) {
+   
+   uint16_t addr_new_neighbor = neighbors_vars.neighbors[neighborIndex].addr_64b.addr_64b[6] << 8 | neighbors_vars.neighbors[neighborIndex].addr_64b.addr_64b[7];
+   openserial_printInfo(COMPONENT_NEIGHBORS, ERR_REMOVE_ENTRY, addr_new_neighbor, 0);
+   
    neighbors_vars.neighbors[neighborIndex].used                      = FALSE;
    neighbors_vars.neighbors[neighborIndex].parentPreference          = 0;
    neighbors_vars.neighbors[neighborIndex].stableNeighbor            = FALSE;

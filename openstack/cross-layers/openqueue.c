@@ -5,6 +5,7 @@
 #include "IEEE802154E.h"
 #include "IEEE802154_security.h"
 #include "sixtop.h"
+#include "idmanager.h"
 
 //=========================== defination =====================================
 
@@ -13,6 +14,7 @@
 //=========================== variables =======================================
 
 openqueue_vars_t openqueue_vars;
+uint8_t num_of_openqueue_entries = 0;
 
 //=========================== prototypes ======================================
 void openqueue_reset_entry(OpenQueueEntry_t* entry);
@@ -88,7 +90,11 @@ OpenQueueEntry_t* openqueue_getFreePacketBuffer(uint8_t creator) {
       if (openqueue_vars.queue[i].owner==COMPONENT_NULL) {
          openqueue_vars.queue[i].creator=creator;
          openqueue_vars.queue[i].owner=COMPONENT_OPENQUEUE;
-         ENABLE_INTERRUPTS(); 
+         ENABLE_INTERRUPTS();
+         num_of_openqueue_entries++;
+         if (idmanager_getIsDAGroot() == TRUE){
+            openserial_printInfo(COMPONENT_OPENQUEUE, ERR_ALLOC_NUM_ENTRIES, num_of_openqueue_entries, creator); 
+         }
          return &openqueue_vars.queue[i];
       }
    }
@@ -109,6 +115,7 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
    uint8_t i;
    INTERRUPT_DECLARATION();
    DISABLE_INTERRUPTS();
+   uint8_t creator = 0;
    for (i=0;i<QUEUELENGTH;i++) {
       if (&openqueue_vars.queue[i]==pkt) {
          if (openqueue_vars.queue[i].owner==COMPONENT_NULL) {
@@ -117,8 +124,13 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
                                   (errorparameter_t)0,
                                   (errorparameter_t)0);
          }
+         creator = openqueue_vars.queue[i].creator;
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
          ENABLE_INTERRUPTS();
+         num_of_openqueue_entries--;
+         if (idmanager_getIsDAGroot() == TRUE){
+            openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
+         }
          return E_SUCCESS;
       }
    }
@@ -142,7 +154,11 @@ void openqueue_removeAllCreatedBy(uint8_t creator) {
    for (i=0;i<QUEUELENGTH;i++){
       if (openqueue_vars.queue[i].creator==creator) {
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
+         num_of_openqueue_entries--;
       }
+   }
+   if (idmanager_getIsDAGroot() == TRUE){
+      openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
    }
    ENABLE_INTERRUPTS();
 }
@@ -342,6 +358,8 @@ void openqueue_reset_entry(OpenQueueEntry_t* entry) {
    //l3
    entry->l3_destinationAdd.type       = ADDR_NONE;
    entry->l3_sourceAdd.type            = ADDR_NONE;
+   //l2.5
+   entry->is_fragment                  = FALSE;
    //l2
    entry->l2_nextORpreviousHop.type    = ADDR_NONE;
    entry->l2_frameType                 = IEEE154_TYPE_UNDEFINED;
