@@ -76,8 +76,6 @@ void techo_timer_cb(opentimers_id_t id){
 }
 
 void techo_send_data_cb(void) {
-  OpenQueueEntry_t*  pkt;
-  
   if (ieee154e_isSynch() == FALSE || 
       neighbors_getNumNeighbors() < 1 || 
       opentcp_getCurrentTCPstate() != TCP_STATE_ESTABLISHED
@@ -88,28 +86,9 @@ void techo_send_data_cb(void) {
      return;
   }
   
-  pkt = openqueue_getFreePacketBuffer(COMPONENT_TECHO);
-    if (pkt==NULL) {
-
-      openserial_printError(
-          COMPONENT_TECHO,
-          ERR_NO_FREE_PACKET_BUFFER,
-          (errorparameter_t)0,
-          (errorparameter_t)0
-       );
-       return;
-  }
+  char* payload = "This is a very very very very big payload, this should be fragmented!";
  
-  char payload[6] = "techo";
-
-  packetfunctions_reserveHeaderSize(pkt,sizeof(payload)-1);
-  memcpy(&pkt->payload[0],payload,sizeof(payload)-1);
-  
-  pkt->owner                         = COMPONENT_TECHO;
-  pkt->creator                       = COMPONENT_TECHO;
-  pkt->length                        = sizeof(payload)-1;
-  
-  if( opentcp_send(pkt) != E_SUCCESS ){
+  if( opentcp_send(payload, strlen(payload), COMPONENT_TECHO) != E_SUCCESS ){
       openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_FAILED_SEND, (errorparameter_t)0, (errorparameter_t)0 );
   }
   else {
@@ -161,11 +140,12 @@ bool techo_wakeUpApp() {
 }
 
 void techo_receive(OpenQueueEntry_t* msg) {
-      openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_RECV_DATA, (errorparameter_t)0, (errorparameter_t)0 );
+   openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_RECV_DATA, (errorparameter_t)0, (errorparameter_t)0 );
 }
 
 void techo_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
-
+   // packet is freed up by the TCP layer when, the ACK is received
+   openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_SENT_SUCCESS, 0, 0);
 }
 
 void techo_changeState(uint8_t state){
