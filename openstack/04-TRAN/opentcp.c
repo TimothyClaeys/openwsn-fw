@@ -36,6 +36,7 @@ void opentcp_init() {
    tcp_vars.state = TCP_STATE_CLOSED;
    tcp_vars.timerId = opentimers_create();
    tcp_vars.ackTimerId = opentimers_create();
+   
    // reset state machine
    opentcp_reset();
 }
@@ -94,28 +95,65 @@ owerror_t opentcp_connect(open_addr_t* dest, uint16_t param_tcp_hisPort, uint16_
    return forwarding_send(tempPkt);
 }
 
-owerror_t opentcp_send(OpenQueueEntry_t* msg) {             //[command] data
-   msg->owner = COMPONENT_OPENTCP;
+owerror_t opentcp_send(char* message, uint16_t size, uint8_t app) {             //[command] data
+   OpenQueueEntry_t* segment;
+   
+   if ( size > MAX_SINGLE_PACKET_SIZE ){
+      segment = openqueue_getFreeBigPacket(app);
+ 
+      if ( segment == NULL ) {
+         openserial_printError(
+            app,
+            ERR_NO_FREE_PACKET_BUFFER,
+            (errorparameter_t)0,
+            (errorparameter_t)0);
+         return E_FAIL;
+         }
+      segment->is_big_packet = TRUE; 
+   }
+   else{
+      segment = openqueue_getFreePacketBuffer(app);
+      
+      if ( segment == NULL ) {
+         openserial_printError(
+            app,
+            ERR_NO_FREE_PACKET_BUFFER,
+            (errorparameter_t)0,
+            (errorparameter_t)0);
+         return E_FAIL;
+         }
+      segment->is_big_packet = FALSE; 
+   }
+
+   packetfunctions_reserveHeaderSize(segment, size);
+   memcpy(segment->payload, message, size);
+
+   segment->owner  = COMPONENT_OPENTCP;
+   segment->length = size;
+
    if (tcp_vars.state!=TCP_STATE_ESTABLISHED) {
       openserial_printError(COMPONENT_OPENTCP,ERR_WRONG_TCP_STATE,
                             (errorparameter_t)tcp_vars.state,
                             (errorparameter_t)2);
       return E_FAIL;
    }
-   if (tcp_vars.dataToSend!=NULL && tcp_vars.retransmission == FALSE) {
+
+   if (tcp_vars.dataToSend!=NULL) {
       openserial_printError(COMPONENT_OPENTCP,ERR_BUSY_SENDING,
                             (errorparameter_t)0,
                             (errorparameter_t)0);
       return E_FAIL;
    }
+
    //I receive command 'send', I send data
-   msg->l4_protocol                     = IANA_TCP;
-   msg->l4_sourcePortORicmpv6Type       = tcp_vars.myPort;
-   msg->l4_destination_port             = tcp_vars.hisPort;
-   msg->l4_payload                      = msg->payload;
-   msg->l4_length                       = msg->length;
-   memcpy(&(msg->l3_destinationAdd),&tcp_vars.hisIPv6Address,sizeof(open_addr_t));
-   tcp_vars.dataToSend = msg;
+   segment->l4_protocol                     = IANA_TCP;
+   segment->l4_sourcePortORicmpv6Type       = tcp_vars.myPort;
+   segment->l4_destination_port             = tcp_vars.hisPort;
+   segment->l4_payload                      = segment->payload;
+   segment->l4_length                       = segment->length;
+
+   memcpy(&(segment->l3_destinationAdd),&tcp_vars.hisIPv6Address,sizeof(open_addr_t));
+   tcp_vars.dataToSend = segment;
    prependTCPHeader(tcp_vars.dataToSend,
          TCP_ACK_YES,
          TCP_PSH_YES,
@@ -125,8 +163,8 @@ owerror_t opentcp_send(OpenQueueEntry_t* msg) {             //[command] data
    tcp_vars.mySeqNum += tcp_vars.dataToSend->l4_length;
    tcp_change_state(TCP_STATE_ALMOST_DATA_SENT);
 
-   opentimers_cancel(tcp_vars.ackTimerId);
-
+   //opentimers_cancel(tcp_vars.ackTimerId);
+   
    opentimers_scheduleAbsolute(
       tcp_vars.ackTimerId,
       2000,
@@ -512,7 +550,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                   TCP_FIN_NO);
            
             if (tcp_vars.lastRecordedSeqNum == tcp_vars.hisNextSeqNum){
-               // retransmission, packet is already in openqueue buffer, throw away to prevent overflow openqueue
+               // incoming retransmission, packet is already in openqueue buffer, throw away to prevent overflow openqueue
                openqueue_freePacketBuffer(msg); 
             }
  
@@ -537,11 +575,11 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
 
       case TCP_STATE_DATA_SENT:                                   //[receive] data
          if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
-            //I receive ACK, data message sent
+            //I receive ACK for a data message sent
                  
             resource = tcp_vars.resources;
+            
             opentimers_cancel(tcp_vars.ackTimerId);           
-            tcp_vars.retransmission = FALSE;
  
             while(NULL != resource){
                if (resource->port == tcp_vars.myPort){
@@ -805,15 +843,34 @@ void timers_tcp_fired(void) {
 
 void timers_tcp_retry_fired(void) {
    if (tcp_vars.state == TCP_STATE_ALMOST_DATA_SENT || TCP_STATE_DATA_SENT){
-      openserial_printError(COMPONENT_OPENTCP, ERR_TCP_RETRANSMISSION, (errorparameter_t)0, (errorparameter_t)0);
-   
-      tcp_vars.retransmission = TRUE;
-      opentcp_send( tcp_vars.dataToSend );  
+ 
+      opentimers_scheduleAbsolute(
+         tcp_vars.ackTimerId,
+         2000,
+         opentimers_getValue(),
+         TIME_MS,
+         opentcp_timer_cb
+      );
+
+      tcp_vars.dataToSend->payload = tcp_vars.dataToSend->l4_payload;
+      tcp_vars.dataToSend->length  = tcp_vars.dataToSend->l4_length;
+
+      prependTCPHeader(tcp_vars.dataToSend,
+            TCP_ACK_YES,
+            TCP_PSH_YES,
+            TCP_RST_NO,
+            TCP_SYN_NO,
+            TCP_FIN_NO);
+      
+      if ( forwarding_send(tcp_vars.dataToSend) == E_SUCCESS ) { 
+         openserial_printError(COMPONENT_OPENTCP, ERR_TCP_RETRANSMISSION, (errorparameter_t)0, (errorparameter_t)0);
+      }
+      else{
+         openserial_printError(COMPONENT_OPENTCP, ERR_TCP_RETRANSMISSION_FAILED, (errorparameter_t)0, (errorparameter_t)0);
+      }
+      
+      tcp_change_state(TCP_STATE_ALMOST_DATA_SENT);
    }
-   else{
-      opentimers_cancel(tcp_vars.ackTimerId);
-   }
-   
 }
 
 //=========================== private =========================================
@@ -923,10 +980,10 @@ void opentcp_timer_cb(opentimers_id_t id) {
    if (id == tcp_vars.timerId) {
       scheduler_push_task(timers_tcp_fired,TASKPRIO_TCP_TIMEOUT);
    }
+
    if (id == tcp_vars.ackTimerId){
       scheduler_push_task(timers_tcp_retry_fired,TASKPRIO_TCP_TIMEOUT);
    }
-
 }
 
 static void opentcp_sendDone_default_handler(OpenQueueEntry_t* msg, owerror_t error) {
