@@ -11,7 +11,7 @@
 
 frag_vars_t frag_vars;
 
-OpenQueueEntry_t* reassemble_fragments(uint16_t tag, uint16_t size);
+void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t* reassembled_msg);
 
 void frag_init(){
    memset(&frag_vars, 0, sizeof(frag_vars_t));
@@ -287,34 +287,52 @@ void frag_receive(OpenQueueEntry_t* msg){
    }
    
    if ( do_reassemble ) {
-      OpenQueueEntry_t* total_msg = reassemble_fragments(tag, size);
-      iphc_receive(total_msg);
+      OpenQueueEntry_t* reassembled_msg;
+      reassembled_msg = openqueue_getFreeBigPacket(COMPONENT_FRAG);
+      
+      reassemble_fragments(tag, size, reassembled_msg);
+      
+      if ( reassembled_msg == NULL ) {
+         return;
+      }
+      else{
+         iphc_receive(reassembled_msg);
+      }
    }
 }
 
 
-OpenQueueEntry_t* reassemble_fragments(uint16_t tag, uint16_t size){
-   OpenQueueEntry_t* total_msg;
+void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t* reassembled_msg){
 
-   total_msg = openqueue_getFreePacketBuffer(COMPONENT_FRAG);
-   if ( total_msg == NULL ) {
+   if ( reassembled_msg == NULL ) {
+      
       openserial_printError(COMPONENT_FRAG, ERR_NO_FREE_PACKET_BUFFER, 0, 0);
+      
+      for(int i = 0; i < REASSEMBLE_BUFFER; i++){
+         if ( frag_vars.reassembleBuf[i].datagram_tag == tag ) {
+            // clean up fragments, because no big packet buffer was found
+            openqueue_freePacketBuffer(frag_vars.reassembleBuf[i].pFragment);
+            memset(&frag_vars.reassembleBuf[i], 0, sizeof(fragment));
+         }
+      }
    }
    
-   packetfunctions_reserveHeaderSize(total_msg, size);
-   uint8_t* start_of_packet = total_msg->payload;
+   reassembled_msg->is_big_packet = TRUE;
+   
+   packetfunctions_reserveHeaderSize(reassembled_msg, size);
+   uint8_t* start_of_packet = reassembled_msg->payload;
 
    for(int i = 0; i < REASSEMBLE_BUFFER; i++){
       if ( frag_vars.reassembleBuf[i].datagram_tag == tag ) {
          // update pointer
-         total_msg->payload = (start_of_packet + (frag_vars.reassembleBuf[i].datagram_offset * 8)) + frag_vars.reassembleBuf[i].fragmentLen;
-         packetfunctions_duplicatePartialPacket(total_msg, frag_vars.reassembleBuf[i].pFragment, frag_vars.reassembleBuf[i].fragmentLen);
+         reassembled_msg->payload = (start_of_packet + (frag_vars.reassembleBuf[i].datagram_offset * 8)) + frag_vars.reassembleBuf[i].fragmentLen;
+         packetfunctions_duplicatePartialPacket(reassembled_msg, frag_vars.reassembleBuf[i].pFragment, frag_vars.reassembleBuf[i].fragmentLen);
          // clean up fragments
          openqueue_freePacketBuffer(frag_vars.reassembleBuf[i].pFragment);
          memset(&frag_vars.reassembleBuf[i], 0, sizeof(fragment));
       }
    }
+   reassembled_msg->length = size;
    
-   total_msg->payload = start_of_packet;
-   return total_msg;
+   reassembled_msg->payload = start_of_packet;
 }

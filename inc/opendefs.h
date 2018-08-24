@@ -41,6 +41,9 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 // maximum celllist length
 #define CELLLIST_MAX_LEN 5
 
+// big packet's size
+#define BIG_PACKET_SIZE  300  
+
 enum {
    E_SUCCESS                           = 0,
    E_FAIL                              = 1,
@@ -330,6 +333,8 @@ enum {
    ERR_ALLOC_NUM_ENTRIES               = 0x8d, // [MAGENTA]Allocate openqueue entry, total entries {0}, creator {1} [END]
    ERR_FREE_NUM_ENTRIES                = 0x8e, // [MAGENTA]Free openqueue entry, total entries {0}, creator {1} [END]
    ERR_MISSING_FRAGS                   = 0x8f, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
+   ERR_TECHO_SENT_SUCCESS              = 0x90, // techo data was successfully received by destination
+   ERR_TCP_RETRANSMISSION_FAILED       = 0x91, // retransmission attempt failed
 };
 
 //=========================== typedef =========================================
@@ -374,7 +379,7 @@ typedef struct {
    uint8_t       creator;                                       // the component which called getFreePacketBuffer()
    uint8_t       owner;                                         // the component which currently owns the entry
    uint8_t*      payload;                                       // pointer to the start of the payload within 'packet'
-   uint8_t       length;                                        // length in bytes of the payload
+   uint16_t      length;                                        // length in bytes of the payload
    //l7
    uint16_t      max_delay;                      // Max delay in milliseconds before which the packet should be delivered to the receiver
    bool			  orgination_time_flag;
@@ -391,6 +396,7 @@ typedef struct {
    open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address 
    //l2.5
    bool          is_fragment;                                   // is set to TRUE when this packet was fragmented
+   bool          is_big_packet; 
    //l2
    owerror_t     l2_sendDoneError;                              // outcome of trying to send this packet
    open_addr_t   l2_nextORpreviousHop;                          // 64b IEEE802.15.4 next (down stack) or previous (up) hop address
@@ -433,64 +439,9 @@ typedef struct {
 
 
 typedef struct {
-   //admin
-   uint8_t       creator;                                       // the component which called getFreePacketBuffer()
-   uint8_t       owner;                                         // the component which currently owns the entry
-   uint8_t*      payload;                                       // pointer to the start of the payload within 'packet'
-   uint8_t       length;                                        // length in bytes of the payload
-   //l7
-   uint16_t      max_delay;                      // Max delay in milliseconds before which the packet should be delivered to the receiver
-   bool					 orgination_time_flag;
-   bool 				 drop_flag;
-   //l4
-   uint8_t       l4_protocol;                                   // l4 protocol to be used
-   bool          l4_protocol_compressed;                        // is the l4 protocol header compressed?
-   uint16_t      l4_sourcePortORicmpv6Type;                     // l4 source port
-   uint16_t      l4_destination_port;                           // l4 destination port
-   uint8_t*      l4_payload;                                    // pointer to the start of the payload of l4 (used for retransmits)
-   uint8_t       l4_length;                                     // length of the payload of l4 (used for retransmits)
-   //l3
-   open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack) 
-   open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address 
-   //l2
-   owerror_t     l2_sendDoneError;                              // outcome of trying to send this packet
-   open_addr_t   l2_nextORpreviousHop;                          // 64b IEEE802.15.4 next (down stack) or previous (up) hop address
-   uint8_t       l2_frameType;                                  // beacon, data, ack, cmd
-   uint8_t       l2_dsn;                                        // sequence number of the received frame
-   uint8_t       l2_retriesLeft;                                // number Tx retries left before packet dropped (dropped when hits 0)
-   uint8_t       l2_numTxAttempts;                              // number Tx attempts
-   asn_t         l2_asn;                                        // at what ASN the packet was Tx'ed or Rx'ed
-   uint8_t*      l2_payload;                                    // pointer to the start of the payload of l2 (used for MAC to fill in ASN in ADV)
-   cellInfo_ht   l2_sixtop_celllist_add[CELLLIST_MAX_LEN];      // record celllist to be added and will be added when 6P response sendDone
-   cellInfo_ht   l2_sixtop_celllist_delete[CELLLIST_MAX_LEN];   // record celllist to be removed and will be removed when 6P response sendDone
-   uint16_t      l2_sixtop_frameID;                             // frameID in 6P message
-   uint8_t       l2_sixtop_messageType;                         // indicating the sixtop message type
-   uint8_t       l2_sixtop_command;                             // command of the received 6p request, recorded in 6p response
-   uint8_t       l2_sixtop_cellOptions;                         // celloptions, used when 6p response senddone. (it's the same with cellOptions in 6p request but with TX and RX bits have been flipped)
-   uint8_t       l2_sixtop_returnCode;                          // return code in 6P response
-   uint8_t*      l2_ASNpayload;                                 // pointer to the ASN in EB
-   uint8_t       l2_joinPriority;                               // the join priority received in EB
-   bool          l2_IEListPresent;                              // did have IE field?
-   bool          l2_payloadIEpresent;                           // did I have payload IE field
-   bool          l2_joinPriorityPresent;
-   bool          l2_isNegativeACK;                              // is the negative ACK?
-   int16_t       l2_timeCorrection;                             // record the timeCorrection and print out at endOfslot
-   //layer-2 security
-   uint8_t       l2_securityLevel;                              // the security level specified for the current frame
-   uint8_t       l2_keyIdMode;                                  // the key Identifier mode specified for the current frame
-   uint8_t       l2_keyIndex;                                   // the key Index specified for the current frame
-   open_addr_t   l2_keySource;                                  // the key Source specified for the current frame
-   uint8_t       l2_authenticationLength;                       // the length of the authentication field
-   uint8_t       commandFrameIdentifier;                        // used in case of Command Frames
-   uint8_t*      l2_FrameCounter;                               // pointer to the FrameCounter in the MAC header
-   //l1 (drivers)
-   uint8_t       l1_txPower;                                    // power for packet to Tx at
-   int8_t        l1_rssi;                                       // RSSI of received packet
-   uint8_t       l1_lqi;                                        // LQI of received packet
-   bool          l1_crc;                                        // did received packet pass CRC check?
-   //the packet
-   uint8_t       packet[300];                           // 1B spi address, 1B length, 125B data, 2B CRC, 1B LQI
-} OpenQueueLargeEntry_t;
+   OpenQueueEntry_t  standard_size_msg;
+   uint8_t           packet_remainder[BIG_PACKET_SIZE - 1 - 1 - 125 - 2 - 1];
+} OpenQueueBigEntry_t;
 
 BEGIN_PACK
 typedef struct {

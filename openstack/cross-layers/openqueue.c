@@ -18,6 +18,7 @@ uint8_t num_of_openqueue_entries = 0;
 
 //=========================== prototypes ======================================
 void openqueue_reset_entry(OpenQueueEntry_t* entry);
+void openqueue_reset_big_entry(OpenQueueBigEntry_t* entry);
 
 //=========================== public ==========================================
 
@@ -31,6 +32,7 @@ void openqueue_init(void) {
    for (i=0;i<QUEUELENGTH;i++){
       openqueue_reset_entry(&(openqueue_vars.queue[i]));
    }
+   openqueue_reset_big_entry(&(openqueue_vars.bigPacket));
 }
 
 /**
@@ -92,9 +94,11 @@ OpenQueueEntry_t* openqueue_getFreePacketBuffer(uint8_t creator) {
          openqueue_vars.queue[i].owner=COMPONENT_OPENQUEUE;
          ENABLE_INTERRUPTS();
          num_of_openqueue_entries++;
+         /*
          if (idmanager_getIsDAGroot() == TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_ALLOC_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
+         */
          return &openqueue_vars.queue[i];
       }
    }
@@ -102,6 +106,28 @@ OpenQueueEntry_t* openqueue_getFreePacketBuffer(uint8_t creator) {
    return NULL;
 }
 
+
+OpenQueueEntry_t*  openqueue_getFreeBigPacket(uint8_t creator){ 
+   INTERRUPT_DECLARATION();
+   DISABLE_INTERRUPTS();
+   
+   // refuse to allocate if we're not in sync
+   if (ieee154e_isSynch()==FALSE){
+     ENABLE_INTERRUPTS();
+     return NULL;
+   }
+   
+   // if you get here, I will try to allocate a buffer for you
+   
+   // if there is no space left for high priority queue, don't reserve
+   if (openqueue_vars.bigPacket.standard_size_msg.owner != COMPONENT_NULL){
+      ENABLE_INTERRUPTS();
+      return NULL;
+   }
+   else{
+      return &(openqueue_vars.bigPacket.standard_size_msg);
+   }
+}
 
 /**
 \brief Free a previously-allocated packet buffer.
@@ -128,11 +154,25 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
          ENABLE_INTERRUPTS();
          num_of_openqueue_entries--;
+         /*
          if (idmanager_getIsDAGroot() == TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
+         */
          return E_SUCCESS;
       }
+   }
+
+   if ( (OpenQueueBigEntry_t *)pkt == &openqueue_vars.bigPacket ){ 
+         if (openqueue_vars.bigPacket.standard_size_msg.owner==COMPONENT_NULL) {
+            // log the error
+            openserial_printCritical(COMPONENT_OPENQUEUE,ERR_FREEING_UNUSED,
+                                  (errorparameter_t)0,
+                                  (errorparameter_t)0);
+         }
+         openqueue_reset_big_entry(&openqueue_vars.bigPacket);
+         ENABLE_INTERRUPTS();
+         return E_SUCCESS;
    }
    // log the error
    openserial_printCritical(COMPONENT_OPENQUEUE,ERR_FREEING_ERROR,
@@ -157,9 +197,14 @@ void openqueue_removeAllCreatedBy(uint8_t creator) {
          num_of_openqueue_entries--;
       }
    }
+   if ( openqueue_vars.bigPacket.standard_size_msg.creator == creator ){
+      openqueue_reset_big_entry(&openqueue_vars.bigPacket);
+   }
+   /*
    if (idmanager_getIsDAGroot() == TRUE){
       openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
    }
+   */  
    ENABLE_INTERRUPTS();
 }
 
@@ -348,6 +393,8 @@ OpenQueueEntry_t*  openqueue_macGetDedicatedPacket(open_addr_t* toNeighbor){
 
 void openqueue_reset_entry(OpenQueueEntry_t* entry) {
    //admin
+   memset(entry, 0, sizeof(OpenQueueEntry_t));
+   
    entry->creator                      = COMPONENT_NULL;
    entry->owner                        = COMPONENT_NULL;
    entry->payload                      = &(entry->packet[127 - IEEE802154_SECURITY_TAG_LEN]); // Footer is longer if security is used
@@ -369,4 +416,10 @@ void openqueue_reset_entry(OpenQueueEntry_t* entry) {
    entry->l2_payloadIEpresent          = 0;
    //l2-security
    entry->l2_securityLevel             = 0;
+}
+
+void openqueue_reset_big_entry(OpenQueueBigEntry_t* entry) {
+   openqueue_reset_entry(&(entry->standard_size_msg));
+   memset(entry->packet_remainder, 0, BIG_PACKET_SIZE - 1 - 1 - 125 - 2 - 1);
+   entry->standard_size_msg.payload = &(entry->packet_remainder[BIG_PACKET_SIZE - 1 - 1 - 125 - 2 - 1]); // make pointer point to the end op the extended buffer
 }

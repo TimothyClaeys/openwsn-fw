@@ -19,7 +19,7 @@
 #define FRAGMENT_BUFFER         5
 #define REASSEMBLE_BUFFER       5
 
-#define MAX_FRAGMENT_SIZE       64 
+#define MAX_FRAGMENT_SIZE       96
 #define DEFAULT_TAG_VALUE       0xFFFFFFFF
 
 typedef struct {

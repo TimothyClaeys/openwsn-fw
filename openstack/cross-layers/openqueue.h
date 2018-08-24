@@ -13,7 +13,7 @@
 
 //=========================== define ==========================================
 
-#define QUEUELENGTH  10
+#define QUEUELENGTH     10
 
 //=========================== typedef =========================================
 
@@ -25,7 +25,8 @@ typedef struct {
 //=========================== module variables ================================
 
 typedef struct {
-   OpenQueueEntry_t queue[QUEUELENGTH];
+   OpenQueueEntry_t     queue[QUEUELENGTH];
+   OpenQueueBigEntry_t  bigPacket;
 } openqueue_vars_t;
 
 //=========================== prototypes ======================================
@@ -34,10 +35,11 @@ typedef struct {
 void               openqueue_init(void);
 bool               debugPrint_queue(void);
 // called by any component
-OpenQueueEntry_t*  openqueue_getFreePacketBuffer(uint8_t creator);
-owerror_t          openqueue_freePacketBuffer(OpenQueueEntry_t* pkt);
-void               openqueue_removeAllCreatedBy(uint8_t creator);
-bool               openqueue_isHighPriorityEntryEnough(void);
+OpenQueueEntry_t*   openqueue_getFreePacketBuffer(uint8_t creator);
+OpenQueueEntry_t*   openqueue_getFreeBigPacket(uint8_t creator);
+owerror_t           openqueue_freePacketBuffer(OpenQueueEntry_t* pkt);
+void                openqueue_removeAllCreatedBy(uint8_t creator);
+bool                openqueue_isHighPriorityEntryEnough(void);
 // called by res
 OpenQueueEntry_t*  openqueue_sixtopGetSentPacket(void);
 OpenQueueEntry_t*  openqueue_sixtopGetReceivedPacket(void);
