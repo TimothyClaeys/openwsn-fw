@@ -40,6 +40,7 @@ typedef struct {
    uint16_t             statePeriod; 
    uint8_t              state; 
    tcp_resource_desc_t  desc;  ///< resource descriptor for this module, used to register at UDP stack 
+   bool                 echoed;
 } techo_vars_t; 
 
 

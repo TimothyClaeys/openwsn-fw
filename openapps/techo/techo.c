@@ -10,12 +10,24 @@
 
 techo_vars_t techo_vars;
 
+static const char* big_payload = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 
+// local gateway
 static const uint8_t techo_dst_addr[] = {
-    0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+    0x20, 0x01, 0x06, 0x60, 0x53, 0x01, 0x00, 0x24,
+    0x10, 0xa8, 0x5b, 0x24, 0x0a, 0xeb, 0x89, 0x03
 };
 
+// milo
+/*
+static const uint8_t techo_dst_addr[] = {
+    0x20, 0x01, 0x06, 0x60, 0x53, 0x01, 0x00, 0x46,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x47, 0x00, 0x05
+};
+*/
+
+uint16_t successful_echo = 0;
+uint16_t bad_echo = 0;
 
 //=========================== prototypes ======================================
 
@@ -43,6 +55,7 @@ void techo_init() {
    techo_vars.desc.callbackConnection   = &techo_connectDone;
    techo_vars.desc.callbackWakeUpApp    = &techo_wakeUpApp;
    techo_vars.state                     = TECHO_CLOSED;
+   techo_vars.echoed                    = TRUE;
  
    techo_vars.statePeriod = TECHO_CONNECT_PERIOD;
 
@@ -78,17 +91,18 @@ void techo_timer_cb(opentimers_id_t id){
 void techo_send_data_cb(void) {
   if (ieee154e_isSynch() == FALSE || 
       neighbors_getNumNeighbors() < 1 || 
-      opentcp_getCurrentTCPstate() != TCP_STATE_ESTABLISHED
+      opentcp_getCurrentTCPstate() != TCP_STATE_ESTABLISHED ||
+      techo_vars.echoed != TRUE
      ) { return; }
-  
+
+  techo_vars.echoed = FALSE; 
+ 
   if (idmanager_getIsDAGroot()) {
      opentimers_destroy(techo_vars.timerId);
      return;
   }
-  
-  char* payload = "This is a very very very very big payload, this should be fragmented!";
- 
-  if( opentcp_send(payload, strlen(payload), COMPONENT_TECHO) != E_SUCCESS ){
+   
+  if( opentcp_send(big_payload, strlen(big_payload), COMPONENT_TECHO) != E_SUCCESS ){
       openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_FAILED_SEND, (errorparameter_t)0, (errorparameter_t)0 );
   }
   else {
@@ -140,7 +154,17 @@ bool techo_wakeUpApp() {
 }
 
 void techo_receive(OpenQueueEntry_t* msg) {
-   openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_RECV_DATA, (errorparameter_t)0, (errorparameter_t)0 );
+   
+   techo_vars.echoed = TRUE; 
+   
+   if ( memcmp(msg->payload, big_payload, msg->length) == 0){
+      successful_echo++;
+      openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_GOOD_ECHO, (errorparameter_t)successful_echo, (errorparameter_t)0 );
+   }
+   else{
+      bad_echo++;
+      openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_BAD_ECHO, (errorparameter_t)bad_echo, (errorparameter_t)0 );
+   }
 }
 
 void techo_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
