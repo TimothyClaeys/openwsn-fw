@@ -398,7 +398,7 @@ void icmpv6rpl_updateMyDAGrankAndParentSelection(void) {
         } else {
             if (neighbors_reachedMinimalTransmission(icmpv6rpl_vars.ParentIndex)==FALSE){
                 // I havn't enough transmission to my parent, don't update.
-                openserial_printInfo(COMPONENT_ICMPv6RPL, ERR_INSUFFICIENT_TX, 0, 0);
+                // openserial_printInfo(COMPONENT_ICMPv6RPL, ERR_INSUFFICIENT_TX, 0, 0);
                 return;
             }
             rankIncrease     = neighbors_getLinkMetric(icmpv6rpl_vars.ParentIndex);
