@@ -3,6 +3,7 @@
 #include "openserial.h"
 #include "packetfunctions.h"
 #include "IEEE802154E.h"
+#include "frag.h"
 #include "IEEE802154_security.h"
 #include "sixtop.h"
 #include "idmanager.h"
@@ -32,7 +33,9 @@ void openqueue_init(void) {
    for (i=0;i<QUEUELENGTH;i++){
       openqueue_reset_entry(&(openqueue_vars.queue[i]));
    }
-   openqueue_reset_big_entry(&(openqueue_vars.bigPacket));
+   for (i=0;i<BIGQUEUELENGTH;i++){
+      openqueue_reset_big_entry(&(openqueue_vars.bigPacket[i]));
+   }
 }
 
 /**
@@ -93,9 +96,8 @@ OpenQueueEntry_t* openqueue_getFreePacketBuffer(uint8_t creator) {
          openqueue_vars.queue[i].creator=creator;
          openqueue_vars.queue[i].owner=COMPONENT_OPENQUEUE;
          ENABLE_INTERRUPTS();
-         num_of_openqueue_entries++;
          /*
-         if (idmanager_getIsDAGroot() == TRUE){
+         if (idmanager_getIsDAGroot() != TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_ALLOC_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
          */
@@ -117,16 +119,27 @@ OpenQueueEntry_t*  openqueue_getFreeBigPacket(uint8_t creator){
      return NULL;
    }
    
-   // if you get here, I will try to allocate a buffer for you
-   
-   // if there is no space left for high priority queue, don't reserve
-   if (openqueue_vars.bigPacket.standard_size_msg.owner != COMPONENT_NULL){
-      ENABLE_INTERRUPTS();
-      return NULL;
+   for (int i=0;i<BIGQUEUELENGTH;i++) {
+      if (
+            openqueue_vars.bigPacket[i].standard_size_msg.owner==COMPONENT_NULL
+         ) {
+ 
+         num_of_openqueue_entries++;
+         if (idmanager_getIsDAGroot() != TRUE){
+            openserial_printInfo(COMPONENT_OPENQUEUE, ERR_ALLOC_NUM_ENTRIES, num_of_openqueue_entries, creator); 
+         }
+         
+         openqueue_vars.bigPacket[i].standard_size_msg.creator=creator;
+         openqueue_vars.bigPacket[i].standard_size_msg.owner=COMPONENT_OPENQUEUE;
+         ENABLE_INTERRUPTS();
+         
+
+         return &openqueue_vars.bigPacket[i].standard_size_msg;
+
+      }
    }
-   else{
-      return &(openqueue_vars.bigPacket.standard_size_msg);
-   }
+   ENABLE_INTERRUPTS();
+   return NULL;
 }
 
 /**
@@ -153,9 +166,8 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
          creator = openqueue_vars.queue[i].creator;
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
          ENABLE_INTERRUPTS();
-         num_of_openqueue_entries--;
          /*
-         if (idmanager_getIsDAGroot() == TRUE){
+         if (idmanager_getIsDAGroot() != TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
          */
@@ -163,16 +175,27 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
       }
    }
 
-   if ( (OpenQueueBigEntry_t *)pkt == &openqueue_vars.bigPacket ){ 
-         if (openqueue_vars.bigPacket.standard_size_msg.owner==COMPONENT_NULL) {
-            // log the error
-            openserial_printCritical(COMPONENT_OPENQUEUE,ERR_FREEING_UNUSED,
-                                  (errorparameter_t)0,
-                                  (errorparameter_t)0);
-         }
-         openqueue_reset_big_entry(&openqueue_vars.bigPacket);
-         ENABLE_INTERRUPTS();
-         return E_SUCCESS;
+   for (i=0;i<BIGQUEUELENGTH;i++){
+      if ( (OpenQueueBigEntry_t *)pkt == &openqueue_vars.bigPacket[i] ){ 
+            if (openqueue_vars.bigPacket[i].standard_size_msg.owner==COMPONENT_NULL) {
+               // log the error
+               openserial_printCritical(COMPONENT_OPENQUEUE,ERR_FREEING_UNUSED,
+                                     (errorparameter_t)0,
+                                     (errorparameter_t)0);
+            }
+            
+            num_of_openqueue_entries--;
+
+            creator = openqueue_vars.bigPacket[i].standard_size_msg.creator;
+            if (idmanager_getIsDAGroot() != TRUE){
+               openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
+            }
+
+            openqueue_reset_big_entry((OpenQueueBigEntry_t*)pkt);
+            
+            ENABLE_INTERRUPTS();
+            return E_SUCCESS;
+      }
    }
    // log the error
    openserial_printCritical(COMPONENT_OPENQUEUE,ERR_FREEING_ERROR,
@@ -194,17 +217,23 @@ void openqueue_removeAllCreatedBy(uint8_t creator) {
    for (i=0;i<QUEUELENGTH;i++){
       if (openqueue_vars.queue[i].creator==creator) {
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
-         num_of_openqueue_entries--;
       }
    }
-   if ( openqueue_vars.bigPacket.standard_size_msg.creator == creator ){
-      openqueue_reset_big_entry(&openqueue_vars.bigPacket);
+   
+   for (i=0;i<BIGQUEUELENGTH;i++){
+      if (openqueue_vars.bigPacket[i].standard_size_msg.creator==creator) {
+         openqueue_reset_big_entry(&(openqueue_vars.bigPacket[i]));
+         num_of_openqueue_entries--;
+         if (idmanager_getIsDAGroot() != TRUE){
+            openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
+         }
+      }
    }
    /*
-   if (idmanager_getIsDAGroot() == TRUE){
+   if (idmanager_getIsDAGroot() != TRUE){
       openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
    }
-   */  
+   */
    ENABLE_INTERRUPTS();
 }
 
@@ -420,6 +449,6 @@ void openqueue_reset_entry(OpenQueueEntry_t* entry) {
 
 void openqueue_reset_big_entry(OpenQueueBigEntry_t* entry) {
    openqueue_reset_entry(&(entry->standard_size_msg));
-   memset(entry->packet_remainder, 0, BIG_PACKET_SIZE - 1 - 1 - 125 - 2 - 1);
-   entry->standard_size_msg.payload = &(entry->packet_remainder[BIG_PACKET_SIZE - 1 - 1 - 125 - 2 - 1]); // make pointer point to the end op the extended buffer
+   memset(entry->packet_remainder, 0, BIG_PACKET_SIZE);
+   entry->standard_size_msg.payload = &(entry->packet_remainder[BIG_PACKET_SIZE]); // make pointer point to the end op the extended buffer
 }

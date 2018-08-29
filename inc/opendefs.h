@@ -36,13 +36,13 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define LENGTH_ADDR64b   8
 #define LENGTH_ADDR128b  16
 
-#define MAXNUMNEIGHBORS  5
+#define MAXNUMNEIGHBORS  1
 
 // maximum celllist length
 #define CELLLIST_MAX_LEN 5
 
 // big packet's size
-#define BIG_PACKET_SIZE  300  
+#define BIG_PACKET_SIZE  150 
 
 enum {
    E_SUCCESS                           = 0,
@@ -294,7 +294,7 @@ enum {
    ERR_TLS_TRANSMISSION_FAILED         = 0x66, // [RED]TLS fragment transmission failed[END]
    ERR_TLS_RECV_BYTES                  = 0x67, // [GREEN]bytes in receive buffer: {0} @ asn: {1}[END]
    ERR_TCP_CHANGING_STATE              = 0x68, // TCP state change: {0} --> {1}
-   ERR_TECHO_RECV_DATA                 = 0x69, // techo data received
+   ERR_TECHO_GOOD_ECHO                 = 0x69, // [GREEN]techo data was successfully echoed by the server, counter {0}![END]
    ERR_TECHO_FAILED_SEND               = 0x6a, // techo sending failed
    ERR_TECHO_SENDING_DATA              = 0x6b, // techo sending data
    ERR_REQUESTING_CLIENT_HELLO         = 0x6c, // [BLUE]request a client hello message, state: {0}, next state in: {1}[END]
@@ -334,7 +334,11 @@ enum {
    ERR_FREE_NUM_ENTRIES                = 0x8e, // [MAGENTA]Free openqueue entry, total entries {0}, creator {1} [END]
    ERR_MISSING_FRAGS                   = 0x8f, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
    ERR_TECHO_SENT_SUCCESS              = 0x90, // techo data was successfully received by destination
-   ERR_TCP_RETRANSMISSION_FAILED       = 0x91, // retransmission attempt failed
+   ERR_TCP_RETRANSMISSION_FAILED       = 0x91, // [RED]retransmission attempt failed[END]
+   ERR_REASSEMBLE                      = 0x92, // reassemble 6lowpan fragments
+   ERR_TECHO_BAD_ECHO                  = 0x93, // [RED]techo data was badly echoed by the server, counter {0}![END]
+   ERR_SEND_TCP_ACK                    = 0x94, // Sending a TCP ACK 
+   ERR_TCP_ACK_SENT                    = 0x95, // TCP ACK was succesfully sent 
 };
 
 //=========================== typedef =========================================
@@ -440,7 +444,7 @@ typedef struct {
 
 typedef struct {
    OpenQueueEntry_t  standard_size_msg;
-   uint8_t           packet_remainder[BIG_PACKET_SIZE - 1 - 1 - 125 - 2 - 1];
+   uint8_t           packet_remainder[BIG_PACKET_SIZE];
 } OpenQueueBigEntry_t;
 
 BEGIN_PACK

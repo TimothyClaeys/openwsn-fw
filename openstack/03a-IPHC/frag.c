@@ -79,11 +79,11 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
       lowpan_fragment->is_fragment   = TRUE;
       
       // construct first fragment
-      packetfunctions_reserveHeaderSize(lowpan_fragment, sizeof(first_frag_t));
+      packetfunctions_reserveHeaderSize(lowpan_fragment, FRAG1_HEADER_SIZE);
       uint16_t temp_dispatch_size_field = ((DISPATCH_FRAG_FIRST & 0x1F) << 11);
       temp_dispatch_size_field |= (frag_vars.fragmentBuf[buf_loc].datagram_size & 0x7FF); 
-      packetfunctions_htons(temp_dispatch_size_field, (uint8_t*)&(((first_frag_t*)lowpan_fragment->payload)->dispatch_size_field)); 
-      packetfunctions_htons(frag_vars.fragmentBuf[buf_loc].datagram_tag, (uint8_t*)&(((first_frag_t*)lowpan_fragment->payload)->datagram_tag)); 
+      packetfunctions_htons(temp_dispatch_size_field, (uint8_t*)&(((frag1_t*)lowpan_fragment->payload)->dispatch_size_field)); 
+      packetfunctions_htons(frag_vars.fragmentBuf[buf_loc].datagram_tag, (uint8_t*)&(((frag1_t*)lowpan_fragment->payload)->datagram_tag)); 
       
       // check if there still is data to send
       while ( rest_size > 0 ) { 
@@ -131,12 +131,12 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
          lowpan_fragment->is_fragment   = TRUE;
 
          // construct subsequent 6lowpan packet
-         packetfunctions_reserveHeaderSize(lowpan_fragment, sizeof(subseq_frag_t));
+         packetfunctions_reserveHeaderSize(lowpan_fragment, FRAGN_HEADER_SIZE);
          temp_dispatch_size_field = ((DISPATCH_FRAG_SUBSEQ & 0x1F) << 11);
          temp_dispatch_size_field |= (frag_vars.fragmentBuf[buf_loc].datagram_size & 0x7FF); 
-         packetfunctions_htons(temp_dispatch_size_field, (uint8_t*)&(((subseq_frag_t*)lowpan_fragment->payload)->dispatch_size_field)); 
-         packetfunctions_htons(frag_vars.fragmentBuf[buf_loc].datagram_tag, (uint8_t*)&(((subseq_frag_t*)lowpan_fragment->payload)->datagram_tag));
-         ((subseq_frag_t*)lowpan_fragment->payload)->datagram_offset = frag_vars.current_offset; 
+         packetfunctions_htons(temp_dispatch_size_field, (uint8_t*)&(((fragn_t*)lowpan_fragment->payload)->dispatch_size_field)); 
+         packetfunctions_htons(frag_vars.fragmentBuf[buf_loc].datagram_tag, (uint8_t*)&(((fragn_t*)lowpan_fragment->payload)->datagram_tag));
+         ((fragn_t*)lowpan_fragment->payload)->datagram_offset = frag_vars.current_offset; 
 
          rest_size = msg->length;
          if ( rest_size != 0 ){
@@ -235,20 +235,29 @@ void frag_receive(OpenQueueEntry_t* msg){
       size = (uint16_t)(packetfunctions_ntohs(msg->payload) & 0x7FF);
       tag  = (uint16_t)(packetfunctions_ntohs(msg->payload+2));
       offset = 0; 
-      packetfunctions_tossHeader(msg, sizeof(first_frag_t));
+      packetfunctions_tossHeader(msg, FRAG1_HEADER_SIZE);
    }
    else if ( dispatch == DISPATCH_FRAG_SUBSEQ ){ 
       // first part of a fragment message
       size    = (uint16_t)(packetfunctions_ntohs(msg->payload) & 0x7FF);
       tag     = (uint16_t)(packetfunctions_ntohs(msg->payload+2));  
-      offset  = (uint8_t)((((subseq_frag_t*)msg->payload)->datagram_offset));  
-      packetfunctions_tossHeader(msg, sizeof(subseq_frag_t));
+      offset  = (uint8_t)((((fragn_t*)msg->payload)->datagram_offset));  
+      packetfunctions_tossHeader(msg, FRAGN_HEADER_SIZE);
    }
    else{
       // unrecognized header, this packet is probably not fragmented, push to higher layer and return  
       return iphc_receive(msg);
    }
-  
+ 
+   // we detect a duplicate fragment (if datagram_tag and offset are the same)
+   for(int i=0; i < REASSEMBLE_BUFFER; i++) {
+      if ( frag_vars.reassembleBuf[i].datagram_tag == tag && frag_vars.reassembleBuf[i].datagram_offset == offset ) {
+         openqueue_freePacketBuffer(msg);
+         return;
+      }
+   }
+ 
+   // we find a new buffer space for a new fragment (new datagram_tag)
    for(int i=0; i < REASSEMBLE_BUFFER; i++) {
       if ( frag_vars.reassembleBuf[i].pFragment == NULL ) {
          frag_vars.reassembleBuf[i].dispatch        = dispatch;
@@ -282,7 +291,7 @@ void frag_receive(OpenQueueEntry_t* msg){
          memset(&frag_vars.reassembleBuf[i], 0, sizeof(fragment));
       }
       else{
-         //packet from the future? Can happen when datagram_tag wraps around
+         // TODO: packet from the future? Can happen when datagram_tag wraps around
       }
    }
    
@@ -306,7 +315,7 @@ void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t* reassem
 
    if ( reassembled_msg == NULL ) {
       
-      openserial_printError(COMPONENT_FRAG, ERR_NO_FREE_PACKET_BUFFER, 0, 0);
+      openserial_printError(COMPONENT_FRAG, ERR_NO_FREE_PACKET_BUFFER, 1, 1);
       
       for(int i = 0; i < REASSEMBLE_BUFFER; i++){
          if ( frag_vars.reassembleBuf[i].datagram_tag == tag ) {
@@ -315,6 +324,10 @@ void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t* reassem
             memset(&frag_vars.reassembleBuf[i], 0, sizeof(fragment));
          }
       }
+   }
+   
+   if ( idmanager_getIsDAGroot() == FALSE){
+      openserial_printInfo(COMPONENT_FRAG, ERR_REASSEMBLE, 0, 0);
    }
    
    reassembled_msg->is_big_packet = TRUE;
@@ -327,12 +340,20 @@ void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t* reassem
          // update pointer
          reassembled_msg->payload = (start_of_packet + (frag_vars.reassembleBuf[i].datagram_offset * 8)) + frag_vars.reassembleBuf[i].fragmentLen;
          packetfunctions_duplicatePartialPacket(reassembled_msg, frag_vars.reassembleBuf[i].pFragment, frag_vars.reassembleBuf[i].fragmentLen);
-         // clean up fragments
+         // Indicate to which big packet these fragments belong, so they can later be freed up when the big packet is released
+         // frag_vars.reassembleBuf[i].pTotalMsg = reassembled_msg;
+         // clean up fragments, wait with clean up until the packet has been received by the higher layer
          openqueue_freePacketBuffer(frag_vars.reassembleBuf[i].pFragment);
          memset(&frag_vars.reassembleBuf[i], 0, sizeof(fragment));
       }
    }
+  
+   // update length and pointer to the start of the packet 
    reassembled_msg->length = size;
-   
    reassembled_msg->payload = start_of_packet;
+}
+
+
+fragment* frag_getReassembleBuffer(){
+   return frag_vars.reassembleBuf;
 }

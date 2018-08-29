@@ -14,7 +14,7 @@
 //=========================== define ==========================================
 
 #define QUEUELENGTH     10
-
+#define BIGQUEUELENGTH  2
 //=========================== typedef =========================================
 
 typedef struct {
@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
    OpenQueueEntry_t     queue[QUEUELENGTH];
-   OpenQueueBigEntry_t  bigPacket;
+   OpenQueueBigEntry_t  bigPacket[BIGQUEUELENGTH];
 } openqueue_vars_t;
 
 //=========================== prototypes ======================================

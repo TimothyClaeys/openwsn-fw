@@ -302,7 +302,7 @@ void packetfunctions_reserveHeaderSize(OpenQueueEntry_t* pkt, uint8_t header_len
 void packetfunctions_tossHeader(OpenQueueEntry_t* pkt, uint8_t header_length) {
    uint16_t size;
    if ( pkt->is_big_packet ){
-      size = 300;
+      size = BIG_PACKET_SIZE+1+1+125+2+1;
    }
    else{
       size = 127;
@@ -319,7 +319,7 @@ void packetfunctions_tossHeader(OpenQueueEntry_t* pkt, uint8_t header_length) {
 void packetfunctions_reserveFooterSize(OpenQueueEntry_t* pkt, uint8_t header_length) { 
    uint16_t size;
    if ( pkt->is_big_packet ){
-      size = 300;
+      size = BIG_PACKET_SIZE+1+1+125+2+1;
    }
    else{
       size = 127;
