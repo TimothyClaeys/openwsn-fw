@@ -95,10 +95,10 @@ owerror_t opentcp_connect(open_addr_t* dest, uint16_t param_tcp_hisPort, uint16_
    return forwarding_send(tempPkt);
 }
 
-owerror_t opentcp_send(char* message, uint16_t size, uint8_t app) {             //[command] data
+owerror_t opentcp_send(const char* message, uint16_t size, uint8_t app) {             //[command] data
    OpenQueueEntry_t* segment;
    
-   if ( size > MAX_SINGLE_PACKET_SIZE ){
+   if ( size > MAX_SMALL_PACKET_SIZE ){
       segment = openqueue_getFreeBigPacket(app);
  
       if ( segment == NULL ) {
@@ -228,7 +228,7 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
 
       case TCP_STATE_ALMOST_DATA_RECEIVED:                        //[sendDone] data
          resource = tcp_vars.resources;
-         
+
          while(NULL != resource){
             if (resource->port == tcp_vars.myPort){
                //an application has been registered for this port
@@ -254,9 +254,9 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
             openqueue_freePacketBuffer(tcp_vars.ackToSend);
             tcp_vars.dataReceived = NULL;
             tcp_vars.ackToSend = NULL;
-
-            tcp_change_state(TCP_STATE_ESTABLISHED);
          }
+         
+         tcp_change_state(TCP_STATE_ESTABLISHED); 
          break; 
 
       case TCP_STATE_ALMOST_FIN_WAIT_1:                           //[sendDone] teardown
@@ -553,10 +553,14 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                // incoming retransmission, packet is already in openqueue buffer, throw away to prevent overflow openqueue
                openqueue_freePacketBuffer(msg); 
             }
+            else{
+
+               packetfunctions_tossHeader(msg,sizeof(tcp_ht));
+               tcp_vars.dataReceived = msg; 
+               tcp_vars.lastRecordedSeqNum = tcp_vars.hisNextSeqNum;
+
+            }
  
-            packetfunctions_tossHeader(msg,sizeof(tcp_ht));
-            tcp_vars.dataReceived = msg; 
-            tcp_vars.lastRecordedSeqNum = tcp_vars.hisNextSeqNum;
             
             tcp_vars.ackToSend = tempPkt; 
             tcp_change_state(TCP_STATE_ALMOST_DATA_RECEIVED);
@@ -605,6 +609,15 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                tcp_vars.dataToSend = NULL;
    
                tcp_change_state(TCP_STATE_ESTABLISHED);
+ 
+               if (msg->length == 20) {
+                  openqueue_freePacketBuffer(msg);
+               }
+               else {
+                  // We have changed the state, loop to process the remaining data
+                  opentcp_receive(msg);
+                  // Second iteration will free the msg
+               }
             }
          } 
          else if (containsControlBits(msg,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) 
@@ -652,13 +665,14 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                   TCP_FIN_NO);
             forwarding_send(tempPkt);
             tcp_change_state(TCP_STATE_ALMOST_CLOSE_WAIT);
+            openqueue_freePacketBuffer(msg);
          } else {
             opentcp_reset();
             openserial_printError(COMPONENT_OPENTCP,ERR_TCP_RESET,
                                   (errorparameter_t)tcp_vars.state,
                                   (errorparameter_t)4);
+            openqueue_freePacketBuffer(msg);
          }
-         openqueue_freePacketBuffer(msg);
          break;
 
       case TCP_STATE_FIN_WAIT_1:                                  //[receive] teardown
@@ -939,6 +953,7 @@ void opentcp_reset() {
    tcp_vars.hisIPv6Address.type = ADDR_NONE;
    tcp_vars.dataToSend          = NULL;
    tcp_vars.dataReceived        = NULL;
+   opentimers_cancel(tcp_vars.ackTimerId);    
    openqueue_removeAllCreatedBy(COMPONENT_OPENTCP);
 }
 

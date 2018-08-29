@@ -12,11 +12,11 @@
 
 //=========================== define ==========================================
 
-#define MAX_SINGLE_PACKET_SIZE    64
+#define MAX_SMALL_PACKET_SIZE    64
 
 enum {
    TCP_INITIAL_SEQNUM             = 100,
-   TCP_TIMEOUT                    = 25000, //in ms
+   TCP_TIMEOUT                    = 10000, //in ms
 };
 
 enum TCP_STATE_enums {
@@ -46,7 +46,7 @@ enum TCP_STATE_enums {
 
 enum TCP_DEFAULTS_enum{
    TCP_DEFAULT_DATA_OFFSET        =   0x50,
-   TCP_DEFAULT_WINDOW_SIZE        =     60,
+   TCP_DEFAULT_WINDOW_SIZE        =    300,
    TCP_DEFAULT_URGENT_POINTER     = 0x0000,
 };
 
@@ -148,7 +148,7 @@ typedef struct {
 
 void           opentcp_init(void);
 owerror_t      opentcp_connect(open_addr_t* dest, uint16_t param_hisPort, uint16_t param_myPort);
-owerror_t      opentcp_send(char* message, uint16_t size, uint8_t app);
+owerror_t      opentcp_send(const char* message, uint16_t size, uint8_t app);
 void           opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error);
 void           opentcp_receive(OpenQueueEntry_t* msg);
 owerror_t      opentcp_close(void);
