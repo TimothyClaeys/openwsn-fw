@@ -128,10 +128,11 @@ struct tcp_resource_desc_t {
 
 typedef struct {
    uint8_t              state;
-   uint32_t             mySeqNum;
    uint16_t             myPort;
-   uint32_t             hisNextSeqNum;
-   uint32_t             lastRecordedSeqNum;
+   uint32_t             hisSeqNum;
+   uint32_t             mySeqNum;
+   uint32_t             myAckNum;
+   uint32_t             hisAckNum;
    uint16_t             hisPort;
    open_addr_t          hisIPv6Address;
    OpenQueueEntry_t*    dataToSend;
