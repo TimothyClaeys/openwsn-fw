@@ -289,7 +289,7 @@ void packetfunctions_writeAddress(OpenQueueEntry_t* msg, open_addr_t* address, b
 
 //======= reserving/tossing headers
 
-void packetfunctions_reserveHeaderSize(OpenQueueEntry_t* pkt, uint8_t header_length) {
+void packetfunctions_reserveHeaderSize(OpenQueueEntry_t* pkt, uint16_t header_length) {
    pkt->payload -= header_length;
    pkt->length  += header_length;
    if ( (uint8_t*)(pkt->payload) < (uint8_t*)(pkt->packet) ) {
@@ -299,7 +299,7 @@ void packetfunctions_reserveHeaderSize(OpenQueueEntry_t* pkt, uint8_t header_len
    }
 }
 
-void packetfunctions_tossHeader(OpenQueueEntry_t* pkt, uint8_t header_length) {
+void packetfunctions_tossHeader(OpenQueueEntry_t* pkt, uint16_t header_length) {
    uint16_t size;
    if ( pkt->is_big_packet ){
       size = BIG_PACKET_SIZE+1+1+125+2+1;
@@ -316,7 +316,7 @@ void packetfunctions_tossHeader(OpenQueueEntry_t* pkt, uint8_t header_length) {
    }
 }
 
-void packetfunctions_reserveFooterSize(OpenQueueEntry_t* pkt, uint8_t header_length) { 
+void packetfunctions_reserveFooterSize(OpenQueueEntry_t* pkt, uint16_t header_length) { 
    uint16_t size;
    if ( pkt->is_big_packet ){
       size = BIG_PACKET_SIZE+1+1+125+2+1;
@@ -332,7 +332,7 @@ void packetfunctions_reserveFooterSize(OpenQueueEntry_t* pkt, uint8_t header_len
    }
 }
 
-void packetfunctions_tossFooter(OpenQueueEntry_t* pkt, uint8_t header_length) {
+void packetfunctions_tossFooter(OpenQueueEntry_t* pkt, uint16_t header_length) {
    pkt->length  -= header_length;
    if (pkt->length>1281) {//wraps around, so a negative value will be >1281 (smallest size IPv6 to support)
       openserial_printError(COMPONENT_PACKETFUNCTIONS,ERR_HEADER_TOO_LONG,
