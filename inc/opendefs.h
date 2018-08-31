@@ -42,7 +42,7 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define CELLLIST_MAX_LEN 5
 
 // big packet's size
-#define BIG_PACKET_SIZE  150 
+#define BIG_PACKET_SIZE  300 
 
 enum {
    E_SUCCESS                           = 0,
@@ -335,7 +335,7 @@ enum {
    ERR_MISSING_FRAGS                   = 0x8f, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
    ERR_TECHO_SENT_SUCCESS              = 0x90, // techo data was successfully received by destination
    ERR_TCP_RETRANSMISSION_FAILED       = 0x91, // [RED]retransmission attempt failed[END]
-   ERR_REASSEMBLE                      = 0x92, // reassemble 6lowpan fragments
+   ERR_REASSEMBLE                      = 0x92, // reassemble 6lowpan fragments, size: {0}
    ERR_TECHO_BAD_ECHO                  = 0x93, // [RED]techo data was badly echoed by the server, counter {0}![END]
    ERR_SEND_TCP_ACK                    = 0x94, // Sending a TCP ACK 
    ERR_TCP_ACK_SENT                    = 0x95, // TCP ACK was succesfully sent 
@@ -394,7 +394,7 @@ typedef struct {
    uint16_t      l4_sourcePortORicmpv6Type;                     // l4 source port
    uint16_t      l4_destination_port;                           // l4 destination port
    uint8_t*      l4_payload;                                    // pointer to the start of the payload of l4 (used for retransmits)
-   uint8_t       l4_length;                                     // length of the payload of l4 (used for retransmits)
+   uint16_t      l4_length;                                     // length of the payload of l4 (used for retransmits)
    //l3
    open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack) 
    open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address 
