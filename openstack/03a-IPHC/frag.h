@@ -52,6 +52,7 @@ typedef struct fragment_t fragment;
 typedef struct {
    uint16_t tag;
    uint32_t tag_to_be_dropped;
+   uint32_t direct_forward;
    uint16_t current_offset;
    fragment fragmentBuf[FRAGMENT_BUFFER];
    fragment reassembleBuf[REASSEMBLE_BUFFER];

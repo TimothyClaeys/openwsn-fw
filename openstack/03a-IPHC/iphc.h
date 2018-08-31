@@ -288,6 +288,13 @@ uint8_t iphc_retrieveIPv6HopByHopHeader(
    rpl_option_ht*       rpl_option
 );
 
+void iphc_retrieveIPv6Header(
+   OpenQueueEntry_t* msg, 
+   ipv6_header_iht* ipv6_outer_header,
+   ipv6_header_iht* ipv6_inner_header,
+   uint8_t*         page_length
+);
+
 #ifdef DEADLINE_OPTION_ENABLED
 void iphc_retrieveIPv6DeadlineHeader(
    OpenQueueEntry_t*    msg,

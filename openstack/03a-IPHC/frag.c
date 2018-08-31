@@ -8,6 +8,8 @@
 #include "sixtop.h"
 #include "frag.h"
 #include "iphc.h"
+#include "openbridge.h"
+#include "icmpv6rpl.h"
 
 frag_vars_t frag_vars;
 
@@ -19,6 +21,7 @@ void frag_init(){
    // unspecified start value, wraps around at 65535
    frag_vars.tag = openrandom_get16b();
    frag_vars.tag_to_be_dropped = DEFAULT_TAG_VALUE; 
+   frag_vars.direct_forward = DEFAULT_TAG_VALUE; 
 
 }
 
@@ -224,9 +227,14 @@ void frag_receive(OpenQueueEntry_t* msg){
    uint16_t  tag;
    uint8_t   offset;
    
-   msg->owner = COMPONENT_FRAG;
-   // check if packet has the fragmentation dispatch header
+   ipv6_header_iht      ipv6_outer_header;
+   ipv6_header_iht      ipv6_inner_header;
+   uint8_t              page_length;
    
+   memset(&ipv6_outer_header,0,sizeof(ipv6_header_iht));
+   memset(&ipv6_inner_header,0,sizeof(ipv6_header_iht));
+   msg->owner = COMPONENT_FRAG;
+   // check if packet has the fragmentation dispatch header 
    
    dispatch = (uint8_t)(packetfunctions_ntohs(msg->payload) >> 11);
    
@@ -235,6 +243,24 @@ void frag_receive(OpenQueueEntry_t* msg){
       size = (uint16_t)(packetfunctions_ntohs(msg->payload) & 0x7FF);
       tag  = (uint16_t)(packetfunctions_ntohs(msg->payload+2));
       offset = 0; 
+
+      // check if the packet is for outside the sensor network
+      msg->payload += FRAG1_HEADER_SIZE;   
+      iphc_retrieveIPv6Header(msg,&ipv6_outer_header,&ipv6_inner_header,&page_length);
+
+      if (
+          idmanager_getIsDAGroot()==TRUE &&
+          packetfunctions_isBroadcastMulticast(&(ipv6_inner_header.dest)) == FALSE
+      ) {
+         msg->payload -= FRAG1_HEADER_SIZE;
+         openbridge_receive(msg);
+         frag_vars.direct_forward = tag;
+         return;
+      }
+      else{
+         msg->payload -= FRAG1_HEADER_SIZE;
+         frag_vars.direct_forward = 0xffffffff;
+      }
       packetfunctions_tossHeader(msg, FRAG1_HEADER_SIZE);
    }
    else if ( dispatch == DISPATCH_FRAG_SUBSEQ ){ 
@@ -242,13 +268,18 @@ void frag_receive(OpenQueueEntry_t* msg){
       size    = (uint16_t)(packetfunctions_ntohs(msg->payload) & 0x7FF);
       tag     = (uint16_t)(packetfunctions_ntohs(msg->payload+2));  
       offset  = (uint8_t)((((fragn_t*)msg->payload)->datagram_offset));  
+
+      if ( idmanager_getIsDAGroot()==TRUE && tag == frag_vars.direct_forward ){
+         openbridge_receive(msg);
+         return;
+      }
       packetfunctions_tossHeader(msg, FRAGN_HEADER_SIZE);
    }
    else{
       // unrecognized header, this packet is probably not fragmented, push to higher layer and return  
       return iphc_receive(msg);
-   }
- 
+   }      
+   
    // we detect a duplicate fragment (if datagram_tag and offset are the same)
    for(int i=0; i < REASSEMBLE_BUFFER; i++) {
       if ( frag_vars.reassembleBuf[i].datagram_tag == tag && frag_vars.reassembleBuf[i].datagram_offset == offset ) {
@@ -270,7 +301,7 @@ void frag_receive(OpenQueueEntry_t* msg){
          break;
       }
    }
-   
+
    uint16_t received_bytes = 0;
    uint16_t total_wanted_bytes = 0;
    bool do_reassemble = FALSE;
@@ -326,9 +357,7 @@ void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t* reassem
       }
    }
    
-   if ( idmanager_getIsDAGroot() == FALSE){
-      openserial_printInfo(COMPONENT_FRAG, ERR_REASSEMBLE, 0, 0);
-   }
+   openserial_printInfo(COMPONENT_FRAG, ERR_REASSEMBLE, size, 0);
    
    reassembled_msg->is_big_packet = TRUE;
    

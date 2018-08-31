@@ -24,12 +24,6 @@ static const uint8_t dagroot_mac64b[]   = {0x02,
 //=========================== prototypes ======================================
 
 //===== IPv6 header
-void iphc_retrieveIPv6Header(
-   OpenQueueEntry_t* msg, 
-   ipv6_header_iht* ipv6_outer_header,
-   ipv6_header_iht* ipv6_inner_header,
-   uint8_t*         page_length
-);
 uint8_t iphc_retrieveIphcHeader(open_addr_t* temp_addr_16b,
    open_addr_t*         temp_addr_64b,
    uint8_t*             dispatch,
