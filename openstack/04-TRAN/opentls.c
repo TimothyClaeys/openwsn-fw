@@ -14,7 +14,7 @@ const char* pers = "mini_client";
 
 //======================= prototypes =====================
 
-uint8_t opentls_internal_fragment( const unsigned char* buf, int16_t size);
+uint16_t opentls_internal_send( const unsigned char* buf, int16_t size);
 uint16_t opentls_internal_read( void *ctx, unsigned char *buf, size_t len );
 uint16_t str_2_int( const unsigned char* str );
 void update_receive_buffer(void);
@@ -59,7 +59,7 @@ void opentls_init() {
       openserial_printCritical(COMPONENT_OPENTLS, ERR_TLS_INIT_FAILED, (errorparameter_t)0, (errorparameter_t)2);
    }
    
-   mbedtls_ssl_set_bio( &opentls_vars.ssl, NULL, opentls_internal_fragment, opentls_internal_read, NULL);
+   mbedtls_ssl_set_bio( &opentls_vars.ssl, NULL, opentls_internal_send, opentls_internal_read, NULL);
    mbedtls_ssl_conf_authmode( &(opentls_vars.conf), MBEDTLS_SSL_VERIFY_NONE ); 
 
    opentls_vars.state_busy             = FALSE;
@@ -90,7 +90,6 @@ void opentls_reset(){
    
 }
 
-
 uint8_t opentls_getCurrentState(){
    return ( opentls_vars.ssl.state );
 }
@@ -98,47 +97,15 @@ uint8_t opentls_getCurrentState(){
 //======================= private =====================
 
 
-uint8_t opentls_internal_fragment( const unsigned char *buf, int16_t length ) {
-   OpenQueueEntry_t* pkt;
-   uint8_t fragment_length;
-
-   pkt = openqueue_getFreePacketBuffer(COMPONENT_OPENTLS);
-   
-   if ( pkt == NULL ) {
-      openserial_printError(
-         COMPONENT_OPENTLS,
-         ERR_NO_FREE_PACKET_BUFFER,
-         (errorparameter_t)0,
-         (errorparameter_t)0
-      );
-      return ( 0 );  
-   }
-
-   if ( MAX_SSL_SIZE > length  ) {
-      fragment_length = length;
-   }
-   else{
-      fragment_length = MAX_SSL_SIZE;
-   }
-
-   opentls_vars.output_left += fragment_length;
-
-   packetfunctions_reserveHeaderSize( pkt, fragment_length );
-   memcpy( pkt->payload, buf , fragment_length );
-   
-   pkt->creator = COMPONENT_OPENTLS;
-   pkt->owner   = COMPONENT_OPENTLS;
-   
-   for(int i=0; i<5; i++){
-      // look for a free spot in the fragment buffer
-      if ( opentls_vars.fragmentBuf[i].fragment == NULL ) {
-         opentls_vars.fragmentBuf[i].fragment = pkt;
-         opentls_vars.fragmentBuf[i].fragmentLen = fragment_length;
-         break;
-      }
+uint16_t opentls_internal_send( const unsigned char *buf, int16_t length ) {
+   opentls_vars.sending_busy = TRUE;
+   if ( opentcp_send(buf, length, COMPONENT_OPENTLS ) == E_SUCCESS ) {
+      return length;
    } 
- 
-   return ( fragment_length );
+   else {
+      opentls_vars.sending_busy = FALSE;
+      return 0;
+   }
 }
 
 
@@ -158,8 +125,7 @@ uint16_t opentls_internal_read( void *ctx, unsigned char *buf, size_t len ){
 
 
 void opentls_connectDone(){
-   // TCP connection is established, start the TLS handshake 
-   // start TLS state machine
+   // TCP connection is established, start the TLS handshake state machine
    opentimers_scheduleAbsolute(
       opentls_vars.timerId,
       OPENTLS_HELLO_REQUEST_TIMER,
@@ -172,7 +138,8 @@ void opentls_connectDone(){
 
 void opentls_sendDone(OpenQueueEntry_t* msg, owerror_t error){
    if ( opentls_vars.sending_busy == FALSE ) {
-      openserial_printError( COMPONENT_OPENTLS, ERR_WRONG_TLS_STATE, (errorparameter_t) opentls_vars.ssl.state, (errorparameter_t)0 );
+      openserial_printError( COMPONENT_OPENTLS, ERR_WRONG_TLS_STATE, (errorparameter_t)opentls_vars.ssl.state, 
+                                                                     (errorparameter_t)0 );
    }
    else{
       opentls_vars.sending_busy = FALSE;
@@ -181,7 +148,7 @@ void opentls_sendDone(OpenQueueEntry_t* msg, owerror_t error){
 
 
 void opentls_handshake_cb(opentimers_id_t id){ 
-   if ( !opentls_vars.output_left && !opentls_vars.state_busy){
+   if ( !opentls_vars.sending_busy && !opentls_vars.state_busy ){
 
       opentls_vars.state_busy = TRUE;
 
@@ -416,40 +383,6 @@ void opentls_handshake_cb(opentimers_id_t id){
             break;
       }
    }
-   else if ( opentls_vars.output_left ){
-      uint16_t timer_period = 0;
-      if ( opentls_vars.output_left < MAX_SSL_SIZE ){
-         switch ( opentls_vars.ssl.state ) {
-            case MBEDTLS_SSL_SERVER_HELLO:
-               timer_period = OPENTLS_SERVER_HELLO_TIMER;
-               break;
-            case MBEDTLS_SSL_CLIENT_KEY_EXCHANGE:
-               timer_period = OPENTLS_TRANSMISSION_TIMER;
-               break;
-            case MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC:
-               timer_period = OPENTLS_CLIENT_FINISHED;
-               break;
-            default:
-               timer_period = OPENTLS_TRANSMISSION_TIMER;
-               break;
-         }
-      }
-      else{
-         timer_period = OPENTLS_TRANSMISSION_TIMER;
-      }
-
-      opentimers_cancel(opentls_vars.timerId);
-      opentimers_scheduleAbsolute(
-         opentls_vars.timerId,
-         timer_period,
-         sctimer_readCounter(),
-         TIME_MS,
-         opentls_handshake_cb
-      );
-      
-      openserial_printInfo( COMPONENT_OPENTLS, ERR_WAITING_FOR_TX, opentls_vars.ssl.state, timer_period );
-      scheduler_push_task( sending_task, TASKPRIO_TLS );
-   }
    else {
       opentimers_cancel(opentls_vars.timerId);
       opentimers_scheduleAbsolute(
@@ -512,45 +445,6 @@ void handshake_task(){
    }
 }
 
-
-void sending_task(){
-   int i = 0;
-
-   if ( opentls_vars.sending_busy ) {
-      // still waiting for ACK of last transmission
-      return;
-   }
-
-   while ( i < 10 ) {
-      if( opentls_vars.fragmentBuf[i].fragment != NULL ){
-         if( opentcp_send( opentls_vars.fragmentBuf[i].fragment ) != E_SUCCESS ){
-            openserial_printError( COMPONENT_OPENTLS, ERR_TLS_TRANSMISSION_FAILED , (errorparameter_t)0, (errorparameter_t)0 );
-            return;
-         }
-         else{
-            uint8_t array[5];
-            ieee154e_getAsn(array);
-
-            uint16_t bytes0and1 = array[1];
-            bytes0and1 = bytes0and1 << 8 | array[0];
-
-            opentls_vars.output_left -= opentls_vars.fragmentBuf[i].fragmentLen;
-            opentls_vars.fragmentBuf[i].fragmentLen = 0;
-            opentls_vars.sending_busy = TRUE;
-            opentls_vars.fragmentBuf[i].fragment = NULL;
-            openserial_printInfo( COMPONENT_OPENTLS, ERR_TLS_SENDING_FRAGMENT , (errorparameter_t)bytes0and1, (errorparameter_t)0 );
-            return;
-         }
-      }
-      else {
-         i++;
-      }
-   }
-   // Nothing left in output buffer
-   opentls_vars.state_busy = FALSE;
-}
-
-
 void opentls_receive(OpenQueueEntry_t* msg){
    uint8_t array[5];
    ieee154e_getAsn(array);
@@ -563,20 +457,6 @@ void opentls_receive(OpenQueueEntry_t* msg){
    opentls_vars.input_left += msg->length;
    openserial_printInfo(COMPONENT_OPENTLS, ERR_TLS_RECV_BYTES, opentls_vars.input_left, lower_asn_value); 
 }
-
-
-uint16_t str_2_int( const unsigned char a[] ) {
-  uint16_t c, n;
- 
-  n = 0;
- 
-  for (c = 0; a[c] != '\0'; c++) {
-    n = n * 10 + a[c] - '0';
-  }
- 
-  return n;
-}
-
 
 void update_receive_buffer(){
    // move up received data

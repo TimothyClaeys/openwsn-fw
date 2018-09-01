@@ -27,26 +27,26 @@ if localEnv['board']=='python':
 # source files that should be included in the build other than
 # those with default application name (application.c)
 additionalSourceFiles = [
-    os.path.join('opencoap','openoscoap.c'),
-    os.path.join('opencoap','usha.c'),
-    os.path.join('opencoap','hkdf.c'),
-    os.path.join('opencoap','hmac.c'),
-    os.path.join('opencoap','sha224-256.c'),
-    os.path.join('opencoap','cborencoder.c'),
-    os.path.join('cjoin','cbor.c'),
-    os.path.join('uecho','uecho.c'),
-    os.path.join('techo','techo.c'),
+    #os.path.join('opencoap','openoscoap.c'),
+    #os.path.join('opencoap','usha.c'),
+    #os.path.join('opencoap','hkdf.c'),
+    #os.path.join('opencoap','hmac.c'),
+    #os.path.join('opencoap','sha224-256.c'),
+    #os.path.join('opencoap','cborencoder.c'),
+    #os.path.join('cjoin','cbor.c'),
+    #os.path.join('uecho','uecho.c'),
+    #os.path.join('techo','techo.c'),
     os.path.join('s_techo','s_techo.c'),
 ]
 
 # header files that should be included in the build other than
 # those with default application name (application.h)
 additionalHeaderFiles = [
-    os.path.join('opencoap','openoscoap.h'),
-    os.path.join('opencoap','sha.h'),
-    os.path.join('opencoap','cborencoder.h'),
-    os.path.join('uecho','uecho.h'),
-    os.path.join('techo','techo.h'),
+    #os.path.join('opencoap','openoscoap.h'),
+    #os.path.join('opencoap','sha.h'),
+    #os.path.join('opencoap','cborencoder.h'),
+    #os.path.join('uecho','uecho.h'),
+    #os.path.join('techo','techo.h'),
     os.path.join('s_techo','s_techo.h'),
 ]
 
@@ -57,10 +57,10 @@ else:
     userApps  = ['s_techo']
 
 # union of default and additional apps (without duplicates)
-apps      = ['opencoap']
+apps      = []
 apps     += sorted(list(set(defaultApps+userApps)))
 if userApps:
-    appsInit  = ['opencoap'] # make sure opencoap is initialized first
+    appsInit  = [] # make sure opencoap is initialized first
     appsInit += sorted(list(set(userApps)))
 else:
     appsInit = []

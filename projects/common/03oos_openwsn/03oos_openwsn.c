@@ -11,7 +11,7 @@
 
 int mote_main(void) {
 
-   unsigned char memory_buf[18000];
+   unsigned char memory_buf[17000];
    mbedtls_memory_buffer_alloc_init( memory_buf, sizeof(memory_buf) );
 
    

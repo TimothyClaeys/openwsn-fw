@@ -51,6 +51,6 @@ void openapps_init(void) {
    //uexpiration_init();
    //umonitor_init();
 
-   techo_init();
-   //s_techo_init();
+   //techo_init();
+   s_techo_init();
 }

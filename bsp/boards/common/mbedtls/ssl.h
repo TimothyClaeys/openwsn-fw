@@ -446,7 +446,7 @@ mbedtls_ssl_states;
  * \note           The callback is allowed to send fewer bytes than requested.
  *                 It must always return the number of bytes actually sent.
  */
-typedef uint8_t mbedtls_ssl_send_t( const unsigned char* buf, int16_t len );
+typedef uint16_t mbedtls_ssl_send_t( const unsigned char* buf, int16_t len );
 
 /**
  * \brief          Callback type: receive data from the network.

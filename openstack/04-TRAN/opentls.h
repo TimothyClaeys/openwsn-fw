@@ -46,11 +46,12 @@
 
 //============================= typedef =============================
 
-
+/*
 typedef struct {
    uint8_t fragmentLen;
    OpenQueueEntry_t* fragment;
 } opentls_packet_fragment_t;
+*/
 
 typedef struct {
    opentimers_id_t            timerId;                   // Timer id for state timer OpenTLS
@@ -62,7 +63,7 @@ typedef struct {
    bool                       length_received;           // Received the length of the incoming packet 
    bool                       input_ready;               // Busy with processing state 
    bool                       sending_busy;              // Busy with sending data 
-   opentls_packet_fragment_t  fragmentBuf[5];            // Buffer to hold fragments of outgoing packets
+   //opentls_packet_fragment_t  fragmentBuf[5];            // Buffer to hold fragments of outgoing packets
    tcp_resource_desc_t*       resources;                 
    mbedtls_entropy_context    entropy; 
    mbedtls_ctr_drbg_context   ctr_drbg; 

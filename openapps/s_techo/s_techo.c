@@ -10,10 +10,10 @@
 
 s_techo_vars_t s_techo_vars;
 
-
+// local wsn gateway
 static const uint8_t s_techo_dst_addr[] = {
-    0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+    0x20, 0x01, 0x06, 0x60, 0x53, 0x01, 0x00, 0x24,
+    0x10, 0xa8, 0x5b, 0x24, 0x0a, 0xeb, 0x89, 0x03
 };
 
 
@@ -107,7 +107,7 @@ void s_techo_connect_cb(void) {
   memcpy(&(dest.addr_128b[0]),s_techo_dst_addr,16);
 
   // WKP_TCP_ECHO is the dest port
-  opentls_connect(&dest, WKP_TCP_ECHO, s_techo_vars.desc.port);
+  opentls_connect(&dest, 443, s_techo_vars.desc.port);
 }
 
 void s_techo_connectDone() {
@@ -134,7 +134,7 @@ bool s_techo_wakeUpApp() {
 }
 
 void s_techo_receive(OpenQueueEntry_t* msg) {
-      openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_RECV_DATA, (errorparameter_t)0, (errorparameter_t)0 );
+      openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_GOOD_ECHO, (errorparameter_t)0, (errorparameter_t)0 );
 }
 
 void s_techo_sendDone(OpenQueueEntry_t* msg, owerror_t error) {

@@ -95,12 +95,12 @@ owerror_t opentcp_connect(open_addr_t* dest, uint16_t param_tcp_hisPort, uint16_
    return forwarding_send(tempPkt);
 }
 
-owerror_t opentcp_send(const char* message, uint16_t size, uint8_t app) {             //[command] data
+owerror_t opentcp_send(const unsigned char* message, uint16_t size, uint8_t app) {             //[command] data
    OpenQueueEntry_t* segment;
    
    // check if we are in the correct state
-   if (tcp_vars.state!=TCP_STATE_ESTABLISHED) {
-      openserial_printError(COMPONENT_OPENTCP,ERR_WRONG_TCP_STATE,
+   if (tcp_vars.state != TCP_STATE_ESTABLISHED ) {
+      openserial_printError(COMPONENT_OPENTCP, ERR_WRONG_TCP_STATE,
                             (errorparameter_t)tcp_vars.state,
                             (errorparameter_t)2);
       return E_FAIL;
