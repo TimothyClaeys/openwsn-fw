@@ -10,7 +10,7 @@
 
 techo_vars_t techo_vars;
 
-static const char* big_payload = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+static const char* big_payload = "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.";
 
 // local gateway
 static const uint8_t techo_dst_addr[] = {

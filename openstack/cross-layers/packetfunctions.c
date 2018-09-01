@@ -487,8 +487,8 @@ void packetfunctions_calculateChecksum(OpenQueueEntry_t* msg, uint8_t* checksum_
     }
    
     // length
-    little_helper[0] = 0;
-    little_helper[1] = msg->length;
+    little_helper[0] = (msg->length >> 8);
+    little_helper[1] = (msg->length & 0x00FF);
     onesComplementSum(temp_checksum,little_helper,2);
    
     // next header

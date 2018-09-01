@@ -105,6 +105,7 @@ owerror_t frag_fragment_packet(OpenQueueEntry_t* msg){
             fragment_length = rest_size;
          }
 
+         // find a new spot in the fragmentation buffer
          for(int i=0; i < FRAGMENT_BUFFER; i++){
             if ( frag_vars.fragmentBuf[i].pFragment == NULL ) {
                buf_loc = i;

@@ -175,7 +175,14 @@ owerror_t opentcp_send(const char* message, uint16_t size, uint8_t app) {       
       opentcp_timer_cb
    );
 
-   return forwarding_send(tcp_vars.dataToSend);
+   if ( forwarding_send(tcp_vars.dataToSend) == E_FAIL ) {
+      openqueue_freePacketBuffer(tcp_vars.dataToSend);
+      tcp_vars.dataToSend = NULL; 
+      return E_FAIL;
+   }
+   else{
+      return E_SUCCESS;
+   }
 }
 
 void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {

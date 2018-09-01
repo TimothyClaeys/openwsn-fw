@@ -46,7 +46,7 @@ enum TCP_STATE_enums {
 
 enum TCP_DEFAULTS_enum{
    TCP_DEFAULT_DATA_OFFSET        =   0x50,
-   TCP_DEFAULT_WINDOW_SIZE        =    300,
+   TCP_DEFAULT_WINDOW_SIZE        =   1280,
    TCP_DEFAULT_URGENT_POINTER     = 0x0000,
 };
 

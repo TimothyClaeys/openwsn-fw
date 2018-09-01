@@ -42,7 +42,7 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define CELLLIST_MAX_LEN 5
 
 // big packet's size
-#define BIG_PACKET_SIZE  300 
+#define BIG_PACKET_SIZE  1150 
 
 enum {
    E_SUCCESS                           = 0,
