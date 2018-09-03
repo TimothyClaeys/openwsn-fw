@@ -1,5 +1,5 @@
-#ifndef __TECHO_H
-#define __TECHO_H
+#ifndef __S_TECHO_H
+#define __S_TECHO_H
 
 /**
 \addtogroup AppTls

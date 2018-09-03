@@ -20,8 +20,6 @@
 
 //============================= define =============================
 
-#define MAX_SSL_SIZE                         60
-
 #define OPENTLS_HELLO_REQUEST_TIMER          50
 #define OPENTLS_CLIENT_HELLO_TIMER           50
 #define OPENTLS_SERVER_HELLO_TIMER           14000
@@ -46,13 +44,6 @@
 
 //============================= typedef =============================
 
-/*
-typedef struct {
-   uint8_t fragmentLen;
-   OpenQueueEntry_t* fragment;
-} opentls_packet_fragment_t;
-*/
-
 typedef struct {
    opentimers_id_t            timerId;                   // Timer id for state timer OpenTLS
    uint16_t                   output_left;               // Check if there is still a fragment to send
@@ -63,7 +54,6 @@ typedef struct {
    bool                       length_received;           // Received the length of the incoming packet 
    bool                       input_ready;               // Busy with processing state 
    bool                       sending_busy;              // Busy with sending data 
-   //opentls_packet_fragment_t  fragmentBuf[5];            // Buffer to hold fragments of outgoing packets
    tcp_resource_desc_t*       resources;                 
    mbedtls_entropy_context    entropy; 
    mbedtls_ctr_drbg_context   ctr_drbg; 
@@ -77,10 +67,10 @@ typedef struct {
 
 //============================= prototypes =============================
 
-void opentls_init(void);
-void opentls_connect(open_addr_t *addr, uint16_t dest_port, uint16_t src_port);
-void opentls_register(tcp_resource_desc_t* desc);
-void opentls_reset(void);
+void 	opentls_init(void);
+void 	opentls_connect(open_addr_t *addr, uint16_t dest_port, uint16_t src_port);
+void 	opentls_register(tcp_resource_desc_t* desc);
+void 	opentls_reset(void);
 uint8_t opentls_getCurrentState(void);
 
 #endif //opentls.h
