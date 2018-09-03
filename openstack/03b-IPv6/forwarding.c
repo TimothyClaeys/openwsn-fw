@@ -246,7 +246,7 @@ void forwarding_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
             icmpv6_sendDone(msg,error);
             break;
          case IANA_TCP:
-            opentcp_sendDone(msg,error);
+            //opentcp_sendDone(msg,error);
             break;
          default: 
             // log error
@@ -320,7 +320,7 @@ void forwarding_receive(
             icmpv6_receive(msg);
             break; 
         case IANA_TCP:
-            opentcp_receive(msg);
+            //opentcp_receive(msg);
             break;
         default:
             // log error

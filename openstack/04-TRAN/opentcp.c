@@ -15,16 +15,16 @@ opentcp_vars_t tcp_vars;
 
 //=========================== prototypes ======================================
 
-void prependTCPHeader(OpenQueueEntry_t* msg, bool ack, bool push, bool rst, bool syn, bool fin);
-bool containsControlBits(OpenQueueEntry_t* msg, uint8_t ack, uint8_t rst, uint8_t syn, uint8_t fin);
+void prependTCPHeader(OpenQueueEntry_t* segment, bool ack, bool push, bool rst, bool syn, bool fin);
+bool containsControlBits(OpenQueueEntry_t* segment, uint8_t ack, uint8_t rst, uint8_t syn, uint8_t fin);
 void tcp_change_state(uint8_t new_state);
 void opentcp_reset(void);
 void opentcp_timer_cb(opentimers_id_t id);
 void retransmissionTCPSegment(void);
 
-static void opentcp_sendDone_default_handler(OpenQueueEntry_t* msg, owerror_t error);
+static void opentcp_sendDone_default_handler(OpenQueueEntry_t* segment, owerror_t error);
 static void opentcp_timeout_default_handler(void);
-static void opentcp_receive_default_handler(OpenQueueEntry_t* msg);
+static void opentcp_receive_default_handler(OpenQueueEntry_t* segment);
 static void opentcp_connection_default_handler(void);
 static bool opentcp_wakeUpApp_default_handler(void);
 
@@ -114,7 +114,7 @@ owerror_t opentcp_send(const unsigned char* message, uint16_t size, uint8_t app)
       return E_FAIL;
    }
    
-   if ( size > MAX_SMALL_PACKET_SIZE ){
+   if ( size > MAX_SMALL_SEGMENT_SIZE ){
       segment = openqueue_getFreeBigPacket(app);
  
       if ( segment == NULL ) {
@@ -185,9 +185,9 @@ owerror_t opentcp_send(const unsigned char* message, uint16_t size, uint8_t app)
    }
 }
 
-void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
+void opentcp_sendDone(OpenQueueEntry_t* segment, owerror_t error) {
    OpenQueueEntry_t* tempPkt;
-   msg->owner = COMPONENT_OPENTCP;
+   segment->owner = COMPONENT_OPENTCP;
 
    tcp_resource_desc_t* resource;
    tcp_callbackConnection_cbt tcp_connection_callback_ptr = NULL;
@@ -195,17 +195,17 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
    
    switch (tcp_vars.state) {
       case TCP_STATE_ALMOST_SYN_SENT:                             //[sendDone] establishement: after sending a tcp syn packet
-         openqueue_freePacketBuffer(msg);                         // to start the tcp handshake
+         openqueue_freePacketBuffer(segment);                         // to start the tcp handshake
          tcp_change_state(TCP_STATE_SYN_SENT);
          break;
 
       case TCP_STATE_ALMOST_SYN_RECEIVED:                         //[sendDone] establishement: I received a syn from a client
-         openqueue_freePacketBuffer(msg);                         //just done sending a synack in response
+         openqueue_freePacketBuffer(segment);                         //just done sending a synack in response
          tcp_change_state(TCP_STATE_SYN_RECEIVED);
          break;
 
       case TCP_STATE_ALMOST_ESTABLISHED:                          //[sendDone] establishement: just tried to send a tcp ack 
-         openqueue_freePacketBuffer(msg);                         //after having received a tcp synack 
+         openqueue_freePacketBuffer(segment);                         //after having received a tcp synack 
          resource = tcp_vars.resources;
          
          while(NULL != resource){
@@ -269,24 +269,24 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
          break; 
 
       case TCP_STATE_ALMOST_FIN_WAIT_1:                           //[sendDone] teardown
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          tcp_change_state(TCP_STATE_FIN_WAIT_1);
          break;
 
       case TCP_STATE_ALMOST_CLOSING:                              //[sendDone] teardown
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          tcp_change_state(TCP_STATE_CLOSING);
          break;
 
       case TCP_STATE_ALMOST_TIME_WAIT:                            //[sendDone] teardown
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          tcp_change_state(TCP_STATE_TIME_WAIT);
          //TODO implement waiting timer
          opentcp_reset();
          break;
 
       case TCP_STATE_ALMOST_CLOSE_WAIT:                           //[sendDone] teardown
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          tcp_change_state(TCP_STATE_CLOSE_WAIT);
          //I send FIN+ACK
          tempPkt = openqueue_getFreePacketBuffer(COMPONENT_OPENTCP);
@@ -294,7 +294,7 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
             openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                   (errorparameter_t)0,
                                   (errorparameter_t)0);
-            openqueue_freePacketBuffer(msg);
+            openqueue_freePacketBuffer(segment);
             return;
          }
          tempPkt->creator       = COMPONENT_OPENTCP;
@@ -311,7 +311,7 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
          break;
 
       case TCP_STATE_ALMOST_LAST_ACK:                             //[sendDone] teardown
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          tcp_change_state(TCP_STATE_LAST_ACK);
          break;
 
@@ -323,15 +323,15 @@ void opentcp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
    }
 }
 
-void opentcp_receive(OpenQueueEntry_t* msg) {
+void opentcp_receive(OpenQueueEntry_t* segment) {
    OpenQueueEntry_t* tempPkt;
    bool shouldIlisten;
-   msg->owner                     = COMPONENT_OPENTCP;
-   msg->l4_protocol               = IANA_TCP;
-   msg->l4_payload                = msg->payload;
-   msg->l4_length                 = msg->length;
-   msg->l4_sourcePortORicmpv6Type = packetfunctions_ntohs((uint8_t*)&(((tcp_ht*)msg->payload)->source_port));
-   msg->l4_destination_port       = packetfunctions_ntohs((uint8_t*)&(((tcp_ht*)msg->payload)->destination_port));
+   segment->owner                     = COMPONENT_OPENTCP;
+   segment->l4_protocol               = IANA_TCP;
+   segment->l4_payload                = segment->payload;
+   segment->l4_length                 = segment->length;
+   segment->l4_sourcePortORicmpv6Type = packetfunctions_ntohs((uint8_t*)&(((tcp_ht*)segment->payload)->source_port));
+   segment->l4_destination_port       = packetfunctions_ntohs((uint8_t*)&(((tcp_ht*)segment->payload)->destination_port));
 
    tcp_resource_desc_t* resource;
    tcp_callbackSendDone_cbt tcp_send_done_callback_ptr = NULL;
@@ -341,20 +341,20 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
    if (
          tcp_vars.state!=TCP_STATE_CLOSED &&
          (
-          msg->l4_destination_port != tcp_vars.myPort  ||
-          msg->l4_sourcePortORicmpv6Type      != tcp_vars.hisPort ||
+          segment->l4_destination_port != tcp_vars.myPort  ||
+          segment->l4_sourcePortORicmpv6Type      != tcp_vars.hisPort ||
           packetfunctions_sameAddress(&tcp_vars.hisIPv6Address,&tcp_vars.hisIPv6Address)==FALSE
          )
       ) {
       
-      openqueue_freePacketBuffer(msg);
+      openqueue_freePacketBuffer(segment);
       return;
    }
 
-   if (containsControlBits(msg,TCP_ACK_WHATEVER,TCP_RST_YES,TCP_SYN_WHATEVER,TCP_FIN_WHATEVER)) {
+   if (containsControlBits(segment,TCP_ACK_WHATEVER,TCP_RST_YES,TCP_SYN_WHATEVER,TCP_FIN_WHATEVER)) {
       //I receive RST[+*], I reset
       opentcp_reset();
-      openqueue_freePacketBuffer(msg);
+      openqueue_freePacketBuffer(segment);
    }
 
    switch (tcp_vars.state) {
@@ -363,7 +363,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
          
          //look for an application with this port number, wake up the application, other unsupported port number
          while(NULL != resource){
-            if (resource->port == msg->l4_destination_port){
+            if (resource->port == segment->l4_destination_port){
                //an application has been registered for this port
                tcp_wakeupapp_callback_ptr = (resource->callbackWakeUpApp == NULL) ? opentcp_wakeUpApp_default_handler 
                                                                                   : resource->callbackWakeUpApp;
@@ -384,23 +384,23 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             shouldIlisten = tcp_wakeupapp_callback_ptr();
          }
 
-         if ( containsControlBits(msg,TCP_ACK_NO,TCP_RST_NO,TCP_SYN_YES,TCP_FIN_NO) && shouldIlisten == TRUE ) 
+         if ( containsControlBits(segment,TCP_ACK_NO,TCP_RST_NO,TCP_SYN_YES,TCP_FIN_NO) && shouldIlisten == TRUE ) 
          {
             //I receive SYN, I send SYN+ACK
             
             //Register client's info
-            tcp_vars.myPort = msg->l4_destination_port;
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
+            tcp_vars.myPort = segment->l4_destination_port;
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
             tcp_vars.myAckNum = tcp_vars.hisSeqNum + 1;
-            tcp_vars.hisPort       = msg->l4_sourcePortORicmpv6Type;
-            memcpy(&tcp_vars.hisIPv6Address,&(msg->l3_destinationAdd),sizeof(open_addr_t));
+            tcp_vars.hisPort       = segment->l4_sourcePortORicmpv6Type;
+            memcpy(&tcp_vars.hisIPv6Address,&(segment->l3_destinationAdd),sizeof(open_addr_t));
 
             tempPkt       = openqueue_getFreePacketBuffer(COMPONENT_OPENTCP);
             if (tempPkt==NULL) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             
@@ -425,19 +425,19 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                                         (errorparameter_t)tcp_vars.state,
                                         (errorparameter_t)0);
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       case TCP_STATE_SYN_SENT:                                    //[receive] establishement
-         if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_YES,TCP_FIN_NO)) 
+         if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_YES,TCP_FIN_NO)) 
          {
             //I receive SYN+ACK, I send ACK
              
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number))); // 0
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));      // 1        
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number))); // 0
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));      // 1        
 
             if ((tcp_vars.hisAckNum - tcp_vars.mySeqNum) != 1){
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                opentcp_reset();
                return;
             }
@@ -450,7 +450,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
              
@@ -467,11 +467,11 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             
             forwarding_send(tempPkt);
          } 
-         else if (containsControlBits(msg,TCP_ACK_NO,TCP_RST_NO,TCP_SYN_YES,TCP_FIN_NO)) 
+         else if (containsControlBits(segment,TCP_ACK_NO,TCP_RST_NO,TCP_SYN_YES,TCP_FIN_NO)) 
          {
             //I receive SYN after I send a SYN first?, I send SYN+ACK
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
             tcp_vars.mySeqNum = tcp_vars.hisAckNum;      //0
             tcp_vars.myAckNum = tcp_vars.hisSeqNum + 1;  //1
@@ -481,7 +481,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             
             }
@@ -506,11 +506,11 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                                   (errorparameter_t)tcp_vars.state,
                                   (errorparameter_t)1);
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       case TCP_STATE_SYN_RECEIVED:                                //[receive] establishement
-         if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
+         if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
             
             //I receive ACK, the virtual circuit is established
             tcp_change_state(TCP_STATE_ESTABLISHED);
@@ -520,15 +520,15 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                                   (errorparameter_t)tcp_vars.state,
                                   (errorparameter_t)2);
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       case TCP_STATE_ESTABLISHED: 
-         if (containsControlBits(msg,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) {
+         if (containsControlBits(segment,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) {
             //I receive FIN[+ACK], I send ACK
             
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
             tcp_vars.mySeqNum = tcp_vars.hisAckNum;
             // suppose that there was no data sent with the FIN flag
@@ -539,7 +539,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             
@@ -556,31 +556,31 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             
             forwarding_send(tempPkt);
          } 
-         else if (containsControlBits(msg,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) 
+         else if (containsControlBits(segment,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) 
          {
             //I receive data, I send ACK
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
             if ((tcp_vars.hisSeqNum - tcp_vars.myAckNum) > 0){
                // some intermediate packet was lost, TODO: store this packet
-               openqueue_freePacketBuffer(msg); 
+               openqueue_freePacketBuffer(segment); 
             }
-            else if (tcp_vars.myAckNum == tcp_vars.hisSeqNum + (msg->length - sizeof(tcp_ht))) {
+            else if (tcp_vars.myAckNum == tcp_vars.hisSeqNum + (segment->length - sizeof(tcp_ht))) {
                // this is an unnecessary retransmission, throw away received packet, I already ack'ed this
-               openqueue_freePacketBuffer(msg); 
+               openqueue_freePacketBuffer(segment); 
             }
             else if (tcp_vars.myAckNum == tcp_vars.hisSeqNum) {
                // everythin is ok!
-               packetfunctions_tossHeader(msg,sizeof(tcp_ht));
-               tcp_vars.dataReceived = msg; 
-               tcp_vars.myAckNum = tcp_vars.hisSeqNum + (msg->l4_length - sizeof(tcp_ht));
+               packetfunctions_tossHeader(segment,sizeof(tcp_ht));
+               tcp_vars.dataReceived = segment; 
+               tcp_vars.myAckNum = tcp_vars.hisSeqNum + (segment->l4_length - sizeof(tcp_ht));
                tcp_vars.mySeqNum = tcp_vars.hisAckNum;
             }
             else{
                // something went wrong!
                opentcp_reset(); 
-               openqueue_freePacketBuffer(msg); 
+               openqueue_freePacketBuffer(segment); 
                return;
             }
 
@@ -589,7 +589,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             tempPkt->creator       = COMPONENT_OPENTCP;
@@ -613,14 +613,14 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             openserial_printError(COMPONENT_OPENTCP,ERR_TCP_RESET,
                                   (errorparameter_t)tcp_vars.state,
                                   (errorparameter_t)3);
-            openqueue_freePacketBuffer(msg);
+            openqueue_freePacketBuffer(segment);
          }
          break;
 
       case TCP_STATE_DATA_SENT:                                   //[receive] ack
-         if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
+         if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
             //I receive ACK for a data message sent
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
             if ( tcp_vars.hisAckNum == tcp_vars.mySeqNum + (tcp_vars.dataToSend->l4_length - sizeof(tcp_ht))){
                //cancel the ack timeout timer (RTO), everything is fine
@@ -666,17 +666,17 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                tcp_change_state(TCP_STATE_ESTABLISHED);
 
                // If the packet is longer than the TCP header, not done processing (ACK came with a data segment) 
-               if (msg->l4_length <= sizeof(tcp_ht)) {
-                  openqueue_freePacketBuffer(msg);
+               if (segment->l4_length <= sizeof(tcp_ht)) {
+                  openqueue_freePacketBuffer(segment);
                }
                else {
                   // We have changed the state, loop to process the remaining data
-                  opentcp_receive(msg);
-                  // Second iteration will free the msg
+                  opentcp_receive(segment);
+                  // Second iteration will free the segment
                }
             }
          } 
-         else if (containsControlBits(msg,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) 
+         else if (containsControlBits(segment,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) 
          {
             //I receive FIN[+ACK], I send ACK
             resource = tcp_vars.resources;
@@ -701,8 +701,8 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             }
 
             tcp_vars.dataToSend = NULL;
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
             
             tcp_vars.mySeqNum = tcp_vars.hisAckNum;
             // No data in finalizing packets
@@ -713,7 +713,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             tempPkt->creator       = COMPONENT_OPENTCP;
@@ -727,21 +727,21 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                   TCP_FIN_NO);
             forwarding_send(tempPkt);
             tcp_change_state(TCP_STATE_ALMOST_CLOSE_WAIT);
-            openqueue_freePacketBuffer(msg);
+            openqueue_freePacketBuffer(segment);
          } else {
             opentcp_reset();
             openserial_printError(COMPONENT_OPENTCP,ERR_TCP_RESET,
                                   (errorparameter_t)tcp_vars.state,
                                   (errorparameter_t)4);
-            openqueue_freePacketBuffer(msg);
+            openqueue_freePacketBuffer(segment);
          }
          break;
 
       case TCP_STATE_FIN_WAIT_1:                                  //[receive] teardown
-         if (containsControlBits(msg,TCP_ACK_NO,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) {
+         if (containsControlBits(segment,TCP_ACK_NO,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) {
             //I receive FIN, I send ACK
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
             tcp_vars.mySeqNum = tcp_vars.hisAckNum;
             tcp_vars.myAckNum = tcp_vars.hisSeqNum + 1;
@@ -751,7 +751,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             tempPkt->creator       = COMPONENT_OPENTCP;
@@ -767,11 +767,11 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             
             forwarding_send(tempPkt);
          } 
-         else if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES))
+         else if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES))
          {
             //I receive FIN+ACK, I send ACK
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
             tcp_vars.mySeqNum = tcp_vars.hisAckNum;
             tcp_vars.myAckNum = tcp_vars.hisSeqNum + 1; 
@@ -781,7 +781,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             tempPkt->creator       = COMPONENT_OPENTCP;
@@ -797,7 +797,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             
             forwarding_send(tempPkt);
          } 
-         else if  (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO))
+         else if  (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO))
          {
             //I receive ACK, I will receive FIN later
             tcp_change_state(TCP_STATE_FIN_WAIT_2);
@@ -809,14 +809,14 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                                   (errorparameter_t)tcp_vars.state,
                                   (errorparameter_t)5);
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       case TCP_STATE_FIN_WAIT_2:                                  //[receive] teardown
-         if (containsControlBits(msg,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) {
+         if (containsControlBits(segment,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_YES)) {
             //I receive FIN[+ACK], I send ACK
-            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number)));
-            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)msg->payload)->ack_number)));
+            tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
+            tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
             
             tcp_vars.mySeqNum = tcp_vars.hisAckNum;
             tcp_vars.myAckNum = tcp_vars.hisSeqNum + 1; 
@@ -826,7 +826,7 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
                openserial_printError(COMPONENT_OPENTCP,ERR_NO_FREE_PACKET_BUFFER,
                                      (errorparameter_t)0,
                                      (errorparameter_t)0);
-               openqueue_freePacketBuffer(msg);
+               openqueue_freePacketBuffer(segment);
                return;
             }
             tempPkt->creator       = COMPONENT_OPENTCP;
@@ -841,25 +841,25 @@ void opentcp_receive(OpenQueueEntry_t* msg) {
             forwarding_send(tempPkt);
             tcp_change_state(TCP_STATE_ALMOST_TIME_WAIT);
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       case TCP_STATE_CLOSING:                                     //[receive] teardown
-         if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
+         if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
             //I receive ACK, I do nothing
             tcp_change_state(TCP_STATE_TIME_WAIT);
             //TODO implement waiting timer
             opentcp_reset();
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       case TCP_STATE_LAST_ACK:                                    //[receive] teardown
-         if (containsControlBits(msg,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
+         if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
             //I receive ACK, I reset
             opentcp_reset();
          }
-         openqueue_freePacketBuffer(msg);
+         openqueue_freePacketBuffer(segment);
          break;
 
       default:
@@ -972,57 +972,57 @@ void retransmissionTCPSegment(){
    }
 }
 
-void prependTCPHeader(OpenQueueEntry_t* msg,
+void prependTCPHeader(OpenQueueEntry_t* segment,
       bool ack,
       bool push,
       bool rst,
       bool syn,
       bool fin) {
    
-   msg->l4_protocol = IANA_TCP;
-   packetfunctions_reserveHeaderSize(msg,sizeof(tcp_ht));
-   packetfunctions_htons(tcp_vars.myPort        ,(uint8_t*)&(((tcp_ht*)msg->payload)->source_port));
-   packetfunctions_htons(tcp_vars.hisPort       ,(uint8_t*)&(((tcp_ht*)msg->payload)->destination_port));
-   packetfunctions_htonl(tcp_vars.mySeqNum  ,(uint8_t*)&(((tcp_ht*)msg->payload)->sequence_number));
-   packetfunctions_htonl(tcp_vars.myAckNum ,(uint8_t*)&(((tcp_ht*)msg->payload)->ack_number));
-   ((tcp_ht*)msg->payload)->data_offset      = TCP_DEFAULT_DATA_OFFSET;
-   ((tcp_ht*)msg->payload)->control_bits     = 0;
+   segment->l4_protocol = IANA_TCP;
+   packetfunctions_reserveHeaderSize(segment,sizeof(tcp_ht));
+   packetfunctions_htons(tcp_vars.myPort        ,(uint8_t*)&(((tcp_ht*)segment->payload)->source_port));
+   packetfunctions_htons(tcp_vars.hisPort       ,(uint8_t*)&(((tcp_ht*)segment->payload)->destination_port));
+   packetfunctions_htonl(tcp_vars.mySeqNum  ,(uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number));
+   packetfunctions_htonl(tcp_vars.myAckNum ,(uint8_t*)&(((tcp_ht*)segment->payload)->ack_number));
+   ((tcp_ht*)segment->payload)->data_offset      = TCP_DEFAULT_DATA_OFFSET;
+   ((tcp_ht*)segment->payload)->control_bits     = 0;
    if (ack==TCP_ACK_YES) {
-      ((tcp_ht*)msg->payload)->control_bits |= 1 << TCP_ACK;
+      ((tcp_ht*)segment->payload)->control_bits |= 1 << TCP_ACK;
    } else {
-   packetfunctions_htonl(0,(uint8_t*)&(((tcp_ht*)msg->payload)->ack_number));
+   packetfunctions_htonl(0,(uint8_t*)&(((tcp_ht*)segment->payload)->ack_number));
 }
    if (push==TCP_PSH_YES) {
-      ((tcp_ht*)msg->payload)->control_bits |= 1 << TCP_PSH;
+      ((tcp_ht*)segment->payload)->control_bits |= 1 << TCP_PSH;
    }
    if (rst==TCP_RST_YES) {
-      ((tcp_ht*)msg->payload)->control_bits |= 1 << TCP_RST;
+      ((tcp_ht*)segment->payload)->control_bits |= 1 << TCP_RST;
    }
    if (syn==TCP_SYN_YES) {
-      ((tcp_ht*)msg->payload)->control_bits |= 1 << TCP_SYN;
+      ((tcp_ht*)segment->payload)->control_bits |= 1 << TCP_SYN;
    }
    if (fin==TCP_FIN_YES) {
-      ((tcp_ht*)msg->payload)->control_bits |= 1 << TCP_FIN;
+      ((tcp_ht*)segment->payload)->control_bits |= 1 << TCP_FIN;
    }
-   packetfunctions_htons(TCP_DEFAULT_WINDOW_SIZE    ,(uint8_t*)&(((tcp_ht*)msg->payload)->window_size));
-   packetfunctions_htons(TCP_DEFAULT_URGENT_POINTER ,(uint8_t*)&(((tcp_ht*)msg->payload)->urgent_pointer));
+   packetfunctions_htons(TCP_DEFAULT_WINDOW_SIZE    ,(uint8_t*)&(((tcp_ht*)segment->payload)->window_size));
+   packetfunctions_htons(TCP_DEFAULT_URGENT_POINTER ,(uint8_t*)&(((tcp_ht*)segment->payload)->urgent_pointer));
    //calculate checksum last to take all header fields into account
-   packetfunctions_calculateChecksum(msg,(uint8_t*)&(((tcp_ht*)msg->payload)->checksum));
+   packetfunctions_calculateChecksum(segment,(uint8_t*)&(((tcp_ht*)segment->payload)->checksum));
 }
 
-bool containsControlBits(OpenQueueEntry_t* msg, uint8_t ack, uint8_t rst, uint8_t syn, uint8_t fin) {
+bool containsControlBits(OpenQueueEntry_t* segment, uint8_t ack, uint8_t rst, uint8_t syn, uint8_t fin) {
    bool return_value = TRUE;
    if (ack!=TCP_ACK_WHATEVER){
-      return_value = return_value && ((bool)( (((tcp_ht*)msg->payload)->control_bits >> TCP_ACK) & 0x01) == ack);
+      return_value = return_value && ((bool)( (((tcp_ht*)segment->payload)->control_bits >> TCP_ACK) & 0x01) == ack);
    }
    if (rst!=TCP_RST_WHATEVER){
-      return_value = return_value && ((bool)( (((tcp_ht*)msg->payload)->control_bits >> TCP_RST) & 0x01) == rst);
+      return_value = return_value && ((bool)( (((tcp_ht*)segment->payload)->control_bits >> TCP_RST) & 0x01) == rst);
    }
    if (syn!=TCP_SYN_WHATEVER){
-      return_value = return_value && ((bool)( (((tcp_ht*)msg->payload)->control_bits >> TCP_SYN) & 0x01) == syn);
+      return_value = return_value && ((bool)( (((tcp_ht*)segment->payload)->control_bits >> TCP_SYN) & 0x01) == syn);
    }
    if (fin!=TCP_FIN_WHATEVER){
-      return_value = return_value && ((bool)( (((tcp_ht*)msg->payload)->control_bits >> TCP_FIN) & 0x01) == fin);
+      return_value = return_value && ((bool)( (((tcp_ht*)segment->payload)->control_bits >> TCP_FIN) & 0x01) == fin);
    }
    return return_value;
 }
@@ -1086,8 +1086,8 @@ void opentcp_timer_cb(opentimers_id_t id) {
    }
 }
 
-static void opentcp_sendDone_default_handler(OpenQueueEntry_t* msg, owerror_t error) {
-   openqueue_freePacketBuffer(msg);
+static void opentcp_sendDone_default_handler(OpenQueueEntry_t* segment, owerror_t error) {
+   openqueue_freePacketBuffer(segment);
 }
 
 static void opentcp_timeout_default_handler() {
@@ -1100,6 +1100,6 @@ static bool opentcp_wakeUpApp_default_handler() {
    return FALSE;
 }
 
-static void opentcp_receive_default_handler(OpenQueueEntry_t* msg) {
-   openqueue_freePacketBuffer(msg);
+static void opentcp_receive_default_handler(OpenQueueEntry_t* segment) {
+   openqueue_freePacketBuffer(segment);
 }               
