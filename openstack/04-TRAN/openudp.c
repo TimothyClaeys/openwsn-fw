@@ -143,7 +143,7 @@ void openudp_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
    // iterate list of registered resources
    resource = openudp_vars.resources;
    while (NULL != resource) {
-      if (resource->port == msg->l4_sourcePortORicmpv6Type) {
+      if (resource->src_port == msg->l4_sourcePortORicmpv6Type) {
          // there is a registration for this port, either forward the send completion or simply release the message
         udp_send_done_callback_ptr = (resource->callbackSendDone == NULL) ? openudp_sendDone_default_handler
                                                                           : resource->callbackSendDone;
@@ -214,7 +214,7 @@ void openudp_receive(OpenQueueEntry_t* msg) {
    // iterate list of registered resources
    resource = openudp_vars.resources;
    while (NULL != resource) {
-      if (resource->port == msg->l4_destination_port) {
+      if (resource->dst_port == msg->l4_destination_port) {
         udp_receive_done_callback_ptr = (resource->callbackReceive == NULL) ? openudp_receive_default_handler
                                                                             : resource->callbackReceive;
          break;

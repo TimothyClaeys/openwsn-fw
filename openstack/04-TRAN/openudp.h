@@ -48,12 +48,13 @@ typedef void (*udp_callbackSendDone_cbt)(OpenQueueEntry_t* msg, owerror_t error)
 typedef struct udp_resource_desc_t udp_resource_desc_t;
 
 struct udp_resource_desc_t {
-   uint16_t                 port;             ///< UDP port that is associated with the resource
-   udp_callbackReceive_cbt  callbackReceive;  ///< receive callback,
-                                              ///< if NULL, all message received for port will be discarded
-   udp_callbackSendDone_cbt callbackSendDone; ///< send completion callback,
-                                              ///< if NULL, the associated message will be release without notification
-   udp_resource_desc_t*     next;
+	uint16_t				 src_port;				 ///< UDP port that is associated with the resource
+	uint16_t				 dst_port;				 ///< UDP port that is associated with the resource
+	udp_callbackReceive_cbt  callbackReceive;  ///< receive callback,
+															 ///< if NULL, all message received for port will be discarded
+	udp_callbackSendDone_cbt callbackSendDone; ///< send completion callback,
+															 ///< if NULL, the associated message will be release without notification
+	udp_resource_desc_t* 	 next;
 };
 
 //=========================== variables =======================================
