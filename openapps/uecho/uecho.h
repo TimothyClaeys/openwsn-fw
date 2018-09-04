@@ -26,8 +26,6 @@ typedef struct {
 	udp_resource_desc_t desc;  ///< resource descriptor for this module, used to register at UDP stack	
 	opentimers_id_t		timerId;
 	uint16_t			uechoPeriod;	
-	uint16_t			srcP;	
-	uint16_t			dstP;	
 } uecho_vars_t;
 
 //=========================== prototypes ======================================

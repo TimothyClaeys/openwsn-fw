@@ -33,9 +33,10 @@ void openudp_register(udp_resource_desc_t* desc) {
 	openudp_vars.resources = desc;
 }
 
-owerror_t openudp_send(const unsigned char* message, uint16_t size, open_addr_t* dest, uint16_t dst_port, uint16_t src_port, uint8_t app) {
+owerror_t openudp_send(udp_resource_desc_t* rsrc_ctx, const unsigned char* message, uint16_t size, uint8_t app) {
 	uint8_t* checksum_position;
 	OpenQueueEntry_t* datagram;
+	udp_resource_desc_t* resource;	
 
 	if ( size > MAX_SMALL_DATAGRAM_SIZE ){
 	    datagram = openqueue_getFreeBigPacket(app);
@@ -62,19 +63,22 @@ owerror_t openudp_send(const unsigned char* message, uint16_t size, open_addr_t*
 	   	 return E_FAIL;
 	   	 }
 	    datagram->is_big_packet = FALSE;
-	}
+	}	
+
+	// get the pointer to the right resource description
+	resource = rsrc_ctx;
 	
 	packetfunctions_reserveHeaderSize(datagram, size);
 	
 	memcpy(datagram->payload, message, size);
-	memcpy(&(datagram->l3_destinationAdd), dest, sizeof(open_addr_t));
+	memcpy(&(datagram->l3_destinationAdd), &(resource->ip_dest_addr), sizeof(open_addr_t));
 
 	datagram->owner		 				= COMPONENT_OPENUDP;
 	datagram->l4_protocol 				= IANA_UDP;
 	datagram->l4_payload  				= datagram->payload;
 	datagram->l4_length					= datagram->length;
-	datagram->l4_destination_port 		= dst_port;
-	datagram->l4_sourcePortORicmpv6Type = src_port;
+	datagram->l4_destination_port 		= resource->dst_port;
+	datagram->l4_sourcePortORicmpv6Type = resource->src_port;
 		 
 	datagram->l4_protocol_compressed = FALSE; // by default
 	uint8_t compType = NHC_UDP_PORTS_INLINE;
@@ -186,7 +190,7 @@ void openudp_sendDone(OpenQueueEntry_t* datagram, owerror_t error) {
 	// iterate list of registered resources
 	resource = openudp_vars.resources;
 	while (NULL != resource) {
-		if (resource->port == datagram->l4_sourcePortORicmpv6Type) {
+		if (resource->src_port == datagram->l4_sourcePortORicmpv6Type) {
 			// there is a registration for this port, either forward the send completion or simply release the message
 		  udp_send_done_callback_ptr = (resource->callbackSendDone == NULL) ? openudp_sendDone_default_handler
 																								  : resource->callbackSendDone;
@@ -258,7 +262,7 @@ void openudp_receive(OpenQueueEntry_t* datagram) {
 	// iterate list of registered resources
 	resource = openudp_vars.resources;
 	while (NULL != resource) {
-		if (resource->port == datagram->l4_destination_port) {
+		if (resource->src_port == datagram->l4_destination_port) {
 		  udp_receive_done_callback_ptr = (resource->callbackReceive == NULL) ? openudp_receive_default_handler
 																									 : resource->callbackReceive;
 			break;

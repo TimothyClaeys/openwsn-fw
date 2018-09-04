@@ -35,7 +35,7 @@ uint16_t bad_echo = 0;
 //=========================== prototypes ======================================
 
 void uecho_timer_cb(opentimers_id_t id);
-void uecho_send_data_cb(void);
+void uecho_send_data_task(void);
 void uecho_receive(OpenQueueEntry_t* msg);
 void uecho_sendDone(OpenQueueEntry_t* msg, owerror_t error);
 bool uecho_debugPrint(void);
@@ -45,19 +45,23 @@ bool uecho_debugPrint(void);
 void uecho_init(void) {
 	// clear local variables
 	memset(&uecho_vars,0,sizeof(uecho_vars_t));
+	
+	open_addr_t dest;
+	dest.type = ADDR_128B;
+	memcpy(&(dest.addr_128b[0]),uecho_dst_addr,16);
 
 	// register at UDP stack
 	uecho_vars.desc.callbackReceive		= &uecho_receive;
 	uecho_vars.desc.callbackSendDone  	= &uecho_sendDone;
-	openudp_register(&uecho_vars.desc);
+	uecho_vars.desc.src_port			= openrandom_get16b();
+	uecho_vars.desc.dst_port			= UDP_ECHO_PORT;
+	uecho_vars.desc.ip_dest_addr		= dest;	
 
+	openudp_register(&uecho_vars.desc);
+	
 	uecho_vars.uechoPeriod = UECHO_PERIOD;
 
 	uecho_vars.timerId = opentimers_create();
-	uecho_vars.srcP    = openrandom_get16b();
-	uecho_vars.dstP	   = UDP_ECHO_PORT; 
-
-	uecho_vars.desc.port				= uecho_vars.srcP;
 	
 	opentimers_scheduleIn(
 		uecho_vars.timerId,
@@ -69,11 +73,11 @@ void uecho_init(void) {
 }
 
 void uecho_timer_cb(opentimers_id_t id){
-	scheduler_push_task(uecho_send_data_cb, TASKPRIO_COAP);
+	scheduler_push_task(uecho_send_data_task, TASKPRIO_COAP);
 }
 
 
-void uecho_send_data_cb(void) {  
+void uecho_send_data_task(void) {  
 	if (ieee154e_isSynch() == FALSE || neighbors_getNumNeighbors() < 1){ return; }
 	
 	// don't run on dagroot
@@ -83,12 +87,9 @@ void uecho_send_data_cb(void) {
 		return;
 	}
 	
-	open_addr_t dest;
-	dest.type = ADDR_128B;
-	memcpy(&(dest.addr_128b[0]),uecho_dst_addr,16);
 	
 	// WKP_TCP_ECHO is the dest port
-	if ( openudp_send(big_payload, strlen(big_payload), &dest, uecho_vars.dstP, uecho_vars.srcP, COMPONENT_UECHO) != E_SUCCESS ) {
+	if ( openudp_send(&uecho_vars.desc, big_payload, strlen(big_payload), COMPONENT_UECHO) == E_SUCCESS ) {
 		openserial_printInfo(COMPONENT_UECHO, ERR_SENDING_ECHO, 0, 0);
 	}
 	else {

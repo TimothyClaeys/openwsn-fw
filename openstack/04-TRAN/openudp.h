@@ -50,12 +50,14 @@ typedef void (*udp_callbackSendDone_cbt)(OpenQueueEntry_t* msg, owerror_t error)
 typedef struct udp_resource_desc_t udp_resource_desc_t;
 
 struct udp_resource_desc_t {
-	uint16_t					  port;				 ///< UDP port that is associated with the resource
-	udp_callbackReceive_cbt  callbackReceive;  ///< receive callback,
-															 ///< if NULL, all message received for port will be discarded
-	udp_callbackSendDone_cbt callbackSendDone; ///< send completion callback,
-															 ///< if NULL, the associated message will be release without notification
-	udp_resource_desc_t*	  next;
+	uint16_t				 src_port;				///< UDP port that is associated with the resource
+	uint16_t				 dst_port;			    ///< UDP port that is associated with the resource
+	open_addr_t				 ip_dest_addr;				
+	udp_callbackReceive_cbt  callbackReceive;		///< receive callback,
+													///< if NULL, all message received for port will be discarded
+	udp_callbackSendDone_cbt callbackSendDone; 		///< send completion callback,
+													///< if NULL, the associated message will be release without notification
+	udp_resource_desc_t*	 next;
 };
 
 //=========================== variables =======================================
@@ -68,7 +70,7 @@ typedef struct {
 
 void	 	openudp_init(void);
 void	 	openudp_register(udp_resource_desc_t* desc);
-owerror_t 	openudp_send(const unsigned char* message, uint16_t size, open_addr_t* dest, uint16_t dst_port, uint16_t src_port, uint8_t app);
+owerror_t 	openudp_send(udp_resource_desc_t* resource, const unsigned char* message, uint16_t size, uint8_t app);
 void	 	openudp_sendDone(OpenQueueEntry_t* msg, owerror_t error);
 void	 	openudp_receive(OpenQueueEntry_t* msg);
 bool	 	openudp_debugPrint(void);
