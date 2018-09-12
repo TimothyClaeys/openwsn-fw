@@ -1196,7 +1196,7 @@ port_INLINE void activity_ti3(void) {
     radio_txNow();
 #endif
     //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_OPENTLS ){
-    openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, ieee154e_vars.localCopyForTransmission.creator);
+    // openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, ieee154e_vars.localCopyForTransmission.creator);
     //}
     //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_ICMPv6RPL && icmpv6rpl_busySendingDAO() == TRUE ){
     //  openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, 0);

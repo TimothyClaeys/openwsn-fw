@@ -254,7 +254,8 @@ void frag_receive(OpenQueueEntry_t* msg){
           packetfunctions_isBroadcastMulticast(&(ipv6_inner_header.dest)) == FALSE
       ) {
          msg->payload -= FRAG1_HEADER_SIZE;
-         openbridge_receive(msg);
+         //openserial_printInfo( COMPONENT_FRAG, ERR_FAST_FORWARD, 0, 0); 
+		 openbridge_receive(msg);
          frag_vars.direct_forward = tag;
          return;
       }
@@ -271,6 +272,7 @@ void frag_receive(OpenQueueEntry_t* msg){
       offset  = (uint8_t)((((fragn_t*)msg->payload)->datagram_offset));  
 
       if ( idmanager_getIsDAGroot()==TRUE && tag == frag_vars.direct_forward ){
+         //openserial_printInfo( COMPONENT_FRAG, ERR_FAST_FORWARD, 0, 0); 
          openbridge_receive(msg);
          return;
       }

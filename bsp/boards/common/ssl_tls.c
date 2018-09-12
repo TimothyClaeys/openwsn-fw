@@ -47,6 +47,8 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
 
+#include "openserial.h"
+#include "opendefs.h"
 #include <string.h>
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -76,9 +78,10 @@ static inline size_t ssl_ep_len( const mbedtls_ssl_context *ssl )
  */
 static void ssl_set_timer( mbedtls_ssl_context *ssl, uint32_t millisecs )
 {
-    if( ssl->f_set_timer == NULL )
+    if( ssl->f_set_timer == NULL ){
         return;
-
+	}
+	openserial_printInfo( COMPONENT_MBEDTLS, ERR_DEBUG, millisecs, 0 );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "set_timer to %d ms", (int) millisecs ) );
     ssl->f_set_timer( ssl->p_timer, millisecs / 4, millisecs );
 }
@@ -2686,6 +2689,7 @@ int mbedtls_ssl_resend( mbedtls_ssl_context *ssl )
         ssl->handshake->cur_msg = cur->next;
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "resent handshake message header", ssl->out_msg, 12 );
+		openserial_printInfo( COMPONENT_MBEDTLS, ERR_RETRANSMISSION, 0, 0);
 
         if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
         {
