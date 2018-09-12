@@ -60,6 +60,7 @@ sources_h = [
     os.path.join('common', 'mbedtls/ssl_internal.h'),
     os.path.join('common', 'mbedtls/threading.h'),
     os.path.join('common', 'mbedtls/timing.h'),
+    os.path.join('common', 'mbedtls/timing_alt.h'),
     os.path.join('common', 'mbedtls/x509.h'),
     os.path.join('common', 'mbedtls/x509_crt.h'),
 ]
@@ -107,6 +108,8 @@ sources_c = [
     os.path.join('common', 'ssl_tls.c'),
     os.path.join('common', 'ssl_cli.c'),
     os.path.join('common', 'ssl_srv.c'),
+	os.path.join('common', 'timing.c'),
+	os.path.join('common', 'timing_alt.c'),
     os.path.join('common', 'x509.c'),
     os.path.join('common', 'x509_crt.c'),
 ]

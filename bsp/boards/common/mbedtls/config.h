@@ -34,9 +34,14 @@
 #ifndef MBEDTLS_CONFIG_H
 #define MBEDTLS_CONFIG_H
 
+#define MBEDTLS_SSL_PROTO_DTLS
+
 /* System support */
 #define MBEDTLS_HAVE_ASM
 //#define MBEDTLS_HAVE_TIME
+#define MBEDTLS_TIMING_C
+#define MBEDTLS_TIMING_ALT
+
 
 /* mbed TLS feature support */
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
@@ -108,8 +113,13 @@
 
 
 /* Save ROM and a few bytes of RAM by specifying our own ciphersuite list */
+/*
 #define MBEDTLS_SSL_CIPHERSUITES                        \
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,    \
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+*/
+
+#define MBEDTLS_SSL_CIPHERSUITES                        \
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
 
 /*
