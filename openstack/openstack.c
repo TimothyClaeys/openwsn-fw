@@ -35,6 +35,7 @@
 //-- 04-TRAN
 #include "opentcp.h"
 #include "opentls.h"
+#include "opendtls.h"
 #include "openudp.h"
 //===== applications
 #include "openapps.h"
@@ -79,6 +80,7 @@ void openstack_init(void) {
    //opentcp_init();
    //opentls_init();
    openudp_init();
+   opendtls_init();
    
    //===== applications
    openapps_init();
