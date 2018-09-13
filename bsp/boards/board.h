@@ -1,11 +1,6 @@
 #ifndef __BOARD_H
 #define __BOARD_H
 
-#include "mbedtls/config.h"
-#include "mbedtls/platform.h"
-#include "mbedtls/memory_buffer_alloc.h"
-
-
 /**
 \addtogroup BSP
 \{
@@ -19,6 +14,10 @@
 
 #include "board_info.h"
 #include "toolchain_defs.h"
+
+#include "mbedtls/config.h"
+#include "mbedtls/platform.h"
+#include "mbedtls/memory_buffer_alloc.h"
 
 //=========================== define ==========================================
 

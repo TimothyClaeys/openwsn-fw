@@ -14,8 +14,8 @@ const char* pers = "dtls_client";
 //======================= prototypes =====================
 
 // internal management of buffers and timers, these functions form the abstraction layer between OpenWSN and MBEDTLS
-uint16_t 	opendtls_internal_send( const unsigned char* buf, int16_t size);
-uint16_t 	opendtls_internal_read( void *ctx, unsigned char *buf, size_t len );
+int 	opendtls_internal_send( void *ctx, const unsigned char* buf, size_t size);
+int 	opendtls_internal_read( void *ctx, unsigned char *buf, size_t len );
 void 		opendtls_internal_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms );
 uint32_t 	opendtls_internal_get_delay( void *data );
 void 		opendtls_internal_update_receive_buffer(void);
@@ -140,7 +140,7 @@ void opendtls_reset(){
 //======================= private =====================
 
 
-uint16_t opendtls_internal_send(const unsigned char *buf, int16_t length ) {
+int opendtls_internal_send(void *ctx, const unsigned char *buf, size_t length ) {
 	if ( openudp_send(&opendtls_vars.udp_desc, buf, length, COMPONENT_OPENDTLS ) == E_SUCCESS ) {
 		return length;
 	} 
@@ -150,7 +150,7 @@ uint16_t opendtls_internal_send(const unsigned char *buf, int16_t length ) {
 }
 
 
-uint16_t opendtls_internal_read( void *ctx, unsigned char *buf, size_t len ){
+int opendtls_internal_read( void *ctx, unsigned char *buf, size_t len ){
 	uint16_t readable = 0;
 	readable = opendtls_vars.input_left;
 

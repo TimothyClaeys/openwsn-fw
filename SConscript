@@ -21,6 +21,8 @@ if env['board']!='python':
             os.path.join('#','inc'),
             os.path.join('#','bsp','boards'),
             os.path.join('#','bsp','boards','common'),
+			os.path.join('#','crypto','mbedtls','include'),
+			os.path.join('#','crypto','mbedtls','library'),
             os.path.join('#','bsp','chips'),
             os.path.join('#','drivers','common'),
             os.path.join('#','kernel'),
@@ -779,10 +781,10 @@ env.AddMethod(extras, 'PostBuildExtras')
 
 def buildLibs(projectDir):
     libs_dict = {
-        '00std': [                                                              ],
-        '01bsp': [                                                      'libbsp'],
-        '02drv': [                             'libkernel','libdrivers','libbsp'],
-        '03oos': ['libopenstack','libopenapps','libopenstack','libkernel','libdrivers','libbsp'], # this order needed for mspgcc
+        '00std': [                                                             							    ],
+        '01bsp': [                                        							   'libbsp', 'libcrypto'],
+        '02drv': [                         				      'libkernel','libdrivers','libbsp', 'libcrypto'],
+        '03oos': ['libopenstack','libopenapps','libopenstack','libkernel','libdrivers','libbsp', 'libcrypto'], # this order needed for mspgcc
     }
     
     returnVal = None
@@ -992,6 +994,18 @@ buildEnv.SConscript(
 )
 buildEnv.Clean('libbsp', Dir(bspVarDir).abspath)
 buildEnv.Append(LIBPATH = [bspVarDir])
+
+# bsp
+cryptoDir       = os.path.join('#','crypto','mbedtls')
+cryptoVarDir    = os.path.join(buildEnv['VARDIR'],'crypto','mbedtls')
+buildEnv.Append(CPPPATH = [cryptoDir])
+buildEnv.SConscript(
+    os.path.join(cryptoDir,'SConscript'),
+    exports     = {'env': buildEnv},
+    variant_dir = cryptoVarDir,
+)
+buildEnv.Clean('libcrypto', Dir(cryptoVarDir).abspath)
+buildEnv.Append(LIBPATH = [cryptoVarDir])
 
 # kernelheader
 kernelHDir      = os.path.join('#','kernel')
