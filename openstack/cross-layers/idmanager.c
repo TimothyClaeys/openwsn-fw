@@ -42,14 +42,14 @@ void idmanager_init(void) {
    idmanager_vars.myPrefix.type        = ADDR_PREFIX;
 #ifdef DAGROOT
 // 2001:660:5301:24
-   idmanager_vars.myPrefix.prefix[0]   = 0x20;
-   idmanager_vars.myPrefix.prefix[1]   = 0x01;
-   idmanager_vars.myPrefix.prefix[2]   = 0x06;
-   idmanager_vars.myPrefix.prefix[3]   = 0x60;
-   idmanager_vars.myPrefix.prefix[4]   = 0x53;
-   idmanager_vars.myPrefix.prefix[5]   = 0x01;
+   idmanager_vars.myPrefix.prefix[0]   = 0xbb;
+   idmanager_vars.myPrefix.prefix[1]   = 0xbb;
+   idmanager_vars.myPrefix.prefix[2]   = 0x00;
+   idmanager_vars.myPrefix.prefix[3]   = 0x00;
+   idmanager_vars.myPrefix.prefix[4]   = 0x00;
+   idmanager_vars.myPrefix.prefix[5]   = 0x00;
    idmanager_vars.myPrefix.prefix[6]   = 0x00;
-   idmanager_vars.myPrefix.prefix[7]   = 0x24;
+   idmanager_vars.myPrefix.prefix[7]   = 0x00;
 #else
    // set prefix to link-local
    idmanager_vars.myPrefix.prefix[0]   = 0xfe;
