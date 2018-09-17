@@ -14,8 +14,8 @@ const char* pers = "tls_client";
 
 //======================= prototypes =====================
 
-uint16_t opentls_internal_send( const unsigned char* buf, int16_t size);
-uint16_t opentls_internal_read( void *ctx, unsigned char *buf, size_t len );
+int opentls_internal_send( void *ctx, const unsigned char* buf, size_t len);
+int opentls_internal_read( void *ctx, unsigned char *buf, size_t len );
 void update_receive_buffer(void);
 
 void opentls_connectDone(void);
@@ -93,7 +93,7 @@ uint8_t opentls_getCurrentState(){
 //======================= private =====================
 
 
-uint16_t opentls_internal_send( const unsigned char *buf, int16_t length ) {
+int opentls_internal_send( void* ctx, const unsigned char *buf, size_t length ) {
 	opentls_vars.sending_busy = TRUE;
 	if ( opentcp_send(buf, length, COMPONENT_OPENTLS ) == E_SUCCESS ) {
 		return length;
@@ -105,7 +105,7 @@ uint16_t opentls_internal_send( const unsigned char *buf, int16_t length ) {
 }
 
 
-uint16_t opentls_internal_read( void *ctx, unsigned char *buf, size_t len ){
+int opentls_internal_read( void *ctx, unsigned char *buf, size_t len ){
 	uint16_t readable = 0;
 	readable = opentls_vars.input_left - opentls_vars.input_read;
 
