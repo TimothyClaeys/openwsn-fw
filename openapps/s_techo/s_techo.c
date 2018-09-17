@@ -134,7 +134,7 @@ bool s_techo_wakeUpApp() {
 }
 
 void s_techo_receive(OpenQueueEntry_t* msg) {
-      openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_GOOD_ECHO, (errorparameter_t)0, (errorparameter_t)0 );
+      //openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_GOOD_ECHO, (errorparameter_t)0, (errorparameter_t)0 );
 }
 
 void s_techo_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
