@@ -122,13 +122,7 @@ uint16_t opentls_internal_read( void *ctx, unsigned char *buf, size_t len ){
 
 void opentls_connectDone(){
 	// TCP connection is established, start the TLS handshake state machine
-	opentimers_scheduleAbsolute(
-		opentls_vars.timerId,
-		OPENTLS_HELLO_REQUEST_TIMER,
-		sctimer_readCounter(),
-		TIME_MS,
-		opentls_handshake_cb
-	);
+	opentls_handshake_cb(opentls_vars.timerId);
 }
 
 
@@ -153,13 +147,13 @@ void opentls_handshake_cb(opentimers_id_t id){
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_CLIENT_HELLO_TIMER,
+					OPENTLS_HELLO_REQUEST_TIMER,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
 				);
-
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_REQUESTING_CLIENT_HELLO, opentls_vars.ssl.state, OPENTLS_CLIENT_HELLO_TIMER );
+				//this state should be done in OPENTLS_HELLO_REQUEST_TIMER time
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_REQUESTING_CLIENT_HELLO, opentls_vars.ssl.state, OPENTLS_HELLO_REQUEST_TIMER );
 
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
@@ -168,13 +162,13 @@ void opentls_handshake_cb(opentimers_id_t id){
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_TRANSMISSION_TIMER,
+					OPENTLS_CLIENT_HELLO_TIMER,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
 				);
 	
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_SENDING_CLIENT_HELLO, opentls_vars.ssl.state, OPENTLS_TRANSMISSION_TIMER );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_SENDING_CLIENT_HELLO, opentls_vars.ssl.state, OPENTLS_CLIENT_HELLO_TIMER );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 	
@@ -182,7 +176,7 @@ void opentls_handshake_cb(opentimers_id_t id){
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_SERVER_CERTIFICATE_TIMER,
+					OPENTLS_SERVER_HELLO_TIMER,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
@@ -196,17 +190,31 @@ void opentls_handshake_cb(opentimers_id_t id){
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
+					OPENTLS_SERVER_CERTIFICATE_TIMER,
+					sctimer_readCounter(),
+					TIME_MS,
+					opentls_handshake_cb
+				);
+				
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_PARSING_SERVER_CERT, opentls_vars.ssl.state, OPENTLS_SERVER_CERTIFICATE_TIMER );
+				scheduler_push_task( handshake_task , TASKPRIO_TLS );
+				break;
+
+			case MBEDTLS_SSL_SERVER_KEY_EXCHANGE:	  //4
+				opentimers_cancel(opentls_vars.timerId);
+				opentimers_scheduleAbsolute(
+					opentls_vars.timerId,
 					OPENTLS_SERVER_KEX_TIMER,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
 				);
 				
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_PARSING_SERVER_CERT, opentls_vars.ssl.state, OPENTLS_SERVER_KEX_TIMER );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_PARSING_SERVER_KEX, opentls_vars.ssl.state, OPENTLS_SERVER_KEX_TIMER );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_SERVER_KEY_EXCHANGE:	  //4
+			case MBEDTLS_SSL_CERTIFICATE_REQUEST:	  //5
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -215,26 +223,26 @@ void opentls_handshake_cb(opentimers_id_t id){
 					TIME_MS,
 					opentls_handshake_cb
 				);
-				
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_PARSING_SERVER_KEX, opentls_vars.ssl.state, OPENTLS_CERTIFICATE_REQ_TIMER );
+
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_CERTIFICATE_REQUEST, opentls_vars.ssl.state, OPENTLS_CERTIFICATE_REQ_TIMER );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_CERTIFICATE_REQUEST:	  //5
+			case MBEDTLS_SSL_SERVER_HELLO_DONE:		 //6
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_SERVER_HELLO_DONE_TIMER,
+					OPENTLS_SERVER_HELLO_DONE,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
 				);
 
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_CERTIFICATE_REQUEST, opentls_vars.ssl.state, OPENTLS_SERVER_HELLO_DONE_TIMER );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_PARSING_SERVER_HELLO_DONE, opentls_vars.ssl.state, OPENTLS_SERVER_HELLO_DONE );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_SERVER_HELLO_DONE:		 //6
+			case MBEDTLS_SSL_CLIENT_CERTIFICATE:		//7
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -244,11 +252,11 @@ void opentls_handshake_cb(opentimers_id_t id){
 					opentls_handshake_cb
 				);
 
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_PARSING_SERVER_HELLO_DONE, opentls_vars.ssl.state, OPENTLS_CLIENT_CERT_TIMER );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_PREP_CLIENT_CERT, opentls_vars.ssl.state, OPENTLS_CLIENT_CERT_TIMER );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_CLIENT_CERTIFICATE:		//7
+			case MBEDTLS_SSL_CLIENT_KEY_EXCHANGE:	  //8
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -258,25 +266,25 @@ void opentls_handshake_cb(opentimers_id_t id){
 					opentls_handshake_cb
 				);
 
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_PREP_CLIENT_CERT, opentls_vars.ssl.state, OPENTLS_CLIENT_KEX_TIMER );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_SENDING_CLIENT_KEX, opentls_vars.ssl.state, OPENTLS_CLIENT_KEX_TIMER );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_CLIENT_KEY_EXCHANGE:	  //8
+			case MBEDTLS_SSL_CERTIFICATE_VERIFY:	  //9
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_CERT_VERIFY_TIMER + OPENTLS_TRANSMISSION_TIMER,
+					OPENTLS_CERT_VERIFY_TIMER,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
 				);
 
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_SENDING_CLIENT_KEX, opentls_vars.ssl.state, OPENTLS_CERT_VERIFY_TIMER + OPENTLS_TRANSMISSION_TIMER );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_CERT_VERIFY, opentls_vars.ssl.state, OPENTLS_CERT_VERIFY_TIMER );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_CERTIFICATE_VERIFY:	  //9
+			case MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC:
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -286,25 +294,25 @@ void opentls_handshake_cb(opentimers_id_t id){
 					opentls_handshake_cb
 				);
 
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_CERT_VERIFY, opentls_vars.ssl.state, OPENTLS_CLIENT_CHANGE_CIPHER_SPEC );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_CLIENT_CHANGE_CIPHER_SPEC, opentls_vars.ssl.state, OPENTLS_CLIENT_CHANGE_CIPHER_SPEC );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
 
-			case MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC:
+			case MBEDTLS_SSL_CLIENT_FINISHED:
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_TRANSMISSION_TIMER,
+					OPENTLS_CLIENT_FINISHED,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
 				);
 
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_CLIENT_CHANGE_CIPHER_SPEC, opentls_vars.ssl.state, OPENTLS_CLIENT_FINISHED );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_CLIENT_DONE, opentls_vars.ssl.state, OPENTLS_CLIENT_FINISHED );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
-				break;
-
-			case MBEDTLS_SSL_CLIENT_FINISHED:
+				break; 
+		  
+			case MBEDTLS_SSL_SERVER_CHANGE_CIPHER_SPEC:
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -313,12 +321,12 @@ void opentls_handshake_cb(opentimers_id_t id){
 					TIME_MS,
 					opentls_handshake_cb
 				);
-
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_CLIENT_DONE, opentls_vars.ssl.state, OPENTLS_SERVER_CHANGE_CIPHER_SPEC );
+				
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_SERVER_CHANGE_CIPHER_SPEC, opentls_vars.ssl.state, OPENTLS_SERVER_CHANGE_CIPHER_SPEC );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break; 
-		  
-			case MBEDTLS_SSL_SERVER_CHANGE_CIPHER_SPEC:
+
+			case MBEDTLS_SSL_SERVER_FINISHED:
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -327,12 +335,12 @@ void opentls_handshake_cb(opentimers_id_t id){
 					TIME_MS,
 					opentls_handshake_cb
 				);
-				
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_SERVER_CHANGE_CIPHER_SPEC, opentls_vars.ssl.state, OPENTLS_SERVER_FINISHED );
+
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_SERVER_DONE, opentls_vars.ssl.state, OPENTLS_SERVER_FINISHED );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break; 
 
-			case MBEDTLS_SSL_SERVER_FINISHED:
+			case MBEDTLS_SSL_FLUSH_BUFFERS:
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
@@ -341,13 +349,13 @@ void opentls_handshake_cb(opentimers_id_t id){
 					TIME_MS,
 					opentls_handshake_cb
 				);
-
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_SERVER_DONE, opentls_vars.ssl.state, OPENTLS_FLUSH_BUFFERS );
+				
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_FLUSH_BUFFERS, opentls_vars.ssl.state, OPENTLS_FLUSH_BUFFERS );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
-				break; 
+				break;
 
-			case MBEDTLS_SSL_FLUSH_BUFFERS:
-				opentimers_cancel(opentls_vars.timerId);
+			case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
+				opentimers_cancel(opentls_vars.timerId); 
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
 					OPENTLS_HANDSHAKE_WRAPUP,
@@ -356,21 +364,7 @@ void opentls_handshake_cb(opentimers_id_t id){
 					opentls_handshake_cb
 				);
 				
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_FLUSH_BUFFERS, opentls_vars.ssl.state, OPENTLS_HANDSHAKE_WRAPUP );
-				scheduler_push_task( handshake_task , TASKPRIO_TLS );
-				break;
-
-			case MBEDTLS_SSL_HANDSHAKE_WRAPUP:
-				opentimers_cancel(opentls_vars.timerId); 
-				opentimers_scheduleAbsolute(
-					opentls_vars.timerId,
-					OPENTLS_FINISHED,
-					sctimer_readCounter(),
-					TIME_MS,
-					opentls_handshake_cb
-				);
-				
-				openserial_printInfo( COMPONENT_OPENTLS, ERR_HANDSHAKE_WRAPUP, opentls_vars.ssl.state, OPENTLS_FINISHED );
+				openserial_printInfo( COMPONENT_OPENTLS, ERR_HANDSHAKE_WRAPUP, opentls_vars.ssl.state, OPENTLS_HANDSHAKE_WRAPUP );
 				scheduler_push_task( handshake_task , TASKPRIO_TLS );
 				break;
   
@@ -381,6 +375,7 @@ void opentls_handshake_cb(opentimers_id_t id){
 	}
 	else {
 		opentimers_cancel(opentls_vars.timerId);
+
 		opentimers_scheduleAbsolute(
 			opentls_vars.timerId,
 			OPENTLS_ADDITIONAL_WAIT_TIMER,
@@ -389,7 +384,7 @@ void opentls_handshake_cb(opentimers_id_t id){
 			opentls_handshake_cb
 		);
 		
-		openserial_printInfo( COMPONENT_OPENTLS, ERR_BUSY_IN_STATE, opentls_vars.ssl.state, opentls_vars.output_left);
+		openserial_printInfo( COMPONENT_OPENTLS, ERR_BUSY_IN_STATE, opentls_vars.ssl.state, 0 );
 	}
 }
 

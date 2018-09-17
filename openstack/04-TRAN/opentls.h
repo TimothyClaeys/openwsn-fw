@@ -20,40 +20,34 @@
 
 //============================= define =============================
 
-#define OPENTLS_HELLO_REQUEST_TIMER          50
-#define OPENTLS_CLIENT_HELLO_TIMER           50
-#define OPENTLS_SERVER_HELLO_TIMER           14000
-#define OPENTLS_SERVER_CERTIFICATE_TIMER     500
-#define OPENTLS_SERVER_KEX_TIMER             100
-#define OPENTLS_CERTIFICATE_REQ_TIMER        3000
-#define OPENTLS_SERVER_HELLO_DONE_TIMER      100
-#define OPENTLS_CLIENT_CERT_TIMER            100
-#define OPENTLS_CLIENT_KEX_TIMER             100
-#define OPENTLS_CERT_VERIFY_TIMER            3000
+#define OPENTLS_HELLO_REQUEST_TIMER          20
+#define OPENTLS_CLIENT_HELLO_TIMER           300
+#define OPENTLS_SERVER_HELLO_TIMER           50
+#define OPENTLS_SERVER_CERTIFICATE_TIMER     200
+#define OPENTLS_SERVER_KEX_TIMER             3200
+#define OPENTLS_CERTIFICATE_REQ_TIMER        100
+#define OPENTLS_SERVER_HELLO_DONE	         75
+#define OPENTLS_CLIENT_CERT_TIMER            75
+#define OPENTLS_CLIENT_KEX_TIMER             3400
+#define OPENTLS_CERT_VERIFY_TIMER            100
 #define OPENTLS_CLIENT_CHANGE_CIPHER_SPEC    200
-#define OPENTLS_CLIENT_FINISHED              200
-#define OPENTLS_SERVER_CHANGE_CIPHER_SPEC    500
-#define OPENTLS_SERVER_FINISHED              500
-#define OPENTLS_FLUSH_BUFFERS                500
-#define OPENTLS_HANDSHAKE_WRAPUP             500
-#define OPENTLS_FINISHED                     50
+#define OPENTLS_CLIENT_FINISHED              75
+#define OPENTLS_SERVER_CHANGE_CIPHER_SPEC    100
+#define OPENTLS_SERVER_FINISHED              100
+#define OPENTLS_FLUSH_BUFFERS                100
+#define OPENTLS_HANDSHAKE_WRAPUP             50
 
-
-#define OPENTLS_TRANSMISSION_TIMER           200
-#define OPENTLS_ADDITIONAL_WAIT_TIMER        2000
+#define OPENTLS_ADDITIONAL_WAIT_TIMER        200
 
 //============================= typedef =============================
 
 typedef struct {
    opentimers_id_t            timerId;                   // Timer id for state timer OpenTLS
-   uint16_t                   output_left;               // Check if there is still a fragment to send
    uint16_t                   input_left;                // Checks if there is still data to be read/processed
    uint16_t                   input_read;                // How much data is read by the mbedtls system calss
-   uint16_t                   expected_length;           // Length of the incoming packet
    bool                       state_busy;                // Busy with processing state 
-   bool                       length_received;           // Received the length of the incoming packet 
-   bool                       input_ready;               // Busy with processing state 
    bool                       sending_busy;              // Busy with sending data 
+   uint8_t					  wait_backoff;
    tcp_resource_desc_t*       resources;                 
    mbedtls_entropy_context    entropy; 
    mbedtls_ctr_drbg_context   ctr_drbg; 

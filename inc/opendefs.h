@@ -321,7 +321,7 @@ enum {
    ERR_HANDSHAKE_WRAPUP                = 0x81, // [BLUE]wrapping up handshake, state: {0}, next state in: {1}[END]
    ERR_WAITING_FOR_DATA                = 0x82, // [YELLOW]waiting for handshake data[END]
    ERR_WAITING_FOR_TX                  = 0x83, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
-   ERR_BUSY_IN_STATE                   = 0x84, // [YELLOW]still processing previous state: {0}, output left: {1}[END]
+   ERR_BUSY_IN_STATE                   = 0x84, // [YELLOW]still processing previous state: {0}[END]
    ERR_TLS_MEM_ALLOC_FAILED            = 0x85, // [RED]heap memory allocation failed (no more memory available)[END]
    ERR_UPDATE_DAGRANK                  = 0x86, // [GREEN]Received DIO and update DAGRANK: {0}[END]
    ERR_SEND_DAO                        = 0x87, // [GREEN]Sent DAO packet[END]
