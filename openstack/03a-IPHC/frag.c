@@ -254,6 +254,7 @@ void frag_receive(OpenQueueEntry_t* msg){
           packetfunctions_isBroadcastMulticast(&(ipv6_inner_header.dest)) == FALSE
       ) {
          msg->payload -= FRAG1_HEADER_SIZE;
+   		 openserial_printInfo(COMPONENT_FRAG, ERR_FAST_FORWARD, 0, 0);
          openbridge_receive(msg);
          frag_vars.direct_forward = tag;
          return;
@@ -271,6 +272,7 @@ void frag_receive(OpenQueueEntry_t* msg){
       offset  = (uint8_t)((((fragn_t*)msg->payload)->datagram_offset));  
 
       if ( idmanager_getIsDAGroot()==TRUE && tag == frag_vars.direct_forward ){
+   		 openserial_printInfo(COMPONENT_FRAG, ERR_FAST_FORWARD, 0, 0);
          openbridge_receive(msg);
          return;
       }
@@ -316,7 +318,7 @@ void frag_receive(OpenQueueEntry_t* msg){
             do_reassemble = TRUE;
          }
       }
-      else if ( frag_vars.reassembleBuf[i].pFragment != NULL && tag > ( frag_vars.reassembleBuf[i].datagram_tag + 4 ) ) {
+      else if ( frag_vars.reassembleBuf[i].pFragment != NULL && tag >= ( frag_vars.reassembleBuf[i].datagram_tag + 1 ) ) {
          // this fragment is part of an incomplete message, probably because another fragment from the same message got dropped,
          // remove this
          openqueue_freePacketBuffer(frag_vars.reassembleBuf[i].pFragment);
