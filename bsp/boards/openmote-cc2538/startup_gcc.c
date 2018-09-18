@@ -84,7 +84,7 @@ void Reset_Handler(void);                            /* Reset Handler */
   User Initial Stack & Heap
  *----------------------------------------------------------------------------*/
 #ifndef __STACK_SIZE
-  #define   __STACK_SIZE  0x00005500
+  #define   __STACK_SIZE  0x00005000
 #endif
 static uint8_t stack[__STACK_SIZE] __attribute__ ((aligned(8), used, section(".stack")));
 
