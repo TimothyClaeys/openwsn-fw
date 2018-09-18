@@ -42,18 +42,32 @@ void schedule_init(void) {
     schedule_vars.backoffExponenton   = MINBE-1;
     schedule_vars.maxActiveSlots = MAXACTIVESLOTS;
     
+	// 1
     start_slotOffset = SCHEDULE_MINIMAL_6TISCH_SLOTOFFSET;
     if (idmanager_getIsDAGroot()==TRUE) {
         schedule_startDAGroot();
     }
     
     // serial RX slot(s)
+	// 2
     start_slotOffset += SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS;
     memset(&temp_neighbor,0,sizeof(temp_neighbor));
     for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALRX;running_slotOffset++) {
         schedule_addActiveSlot(
             running_slotOffset,                    // slot offset
             CELLTYPE_SERIALRX,                     // type of slot
+            FALSE,                                 // shared?
+            0,                                     // channel offset
+            &temp_neighbor                         // neighbor
+        );
+    }
+    
+	start_slotOffset += NUMSERIALRX;
+    memset(&temp_neighbor,0,sizeof(temp_neighbor));
+    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALTX;running_slotOffset++) {
+        schedule_addActiveSlot(
+            running_slotOffset,                    // slot offset
+            CELLTYPE_SERIALTX,                    // type of slot
             FALSE,                                 // shared?
             0,                                     // channel offset
             &temp_neighbor                         // neighbor

@@ -26,7 +26,8 @@ The superframe reappears over time and can be arbitrarily long.
 #define SCHEDULE_MINIMAL_6TISCH_DEFAULT_SLOTFRAME_HANDLE          0 //id of slotframe
 #define SCHEDULE_MINIMAL_6TISCH_DEFAULT_SLOTFRAME_NUMBER          1 //1 slotframe by default.
 
-#define NUMSERIALRX          3
+#define NUMSERIALRX         3 
+#define NUMSERIALTX         3
 
 /*
   NUMSLOTSOFF is the max number of cells that the mote can add into schedule, 
@@ -51,7 +52,8 @@ in that table; a slot is "active" when it is not of type CELLTYPE_OFF.
 Set this number to the exact number of active slots you are planning on having
 in your schedule, so not to waste RAM.
 */
-#define MAXACTIVESLOTS       (SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS+NUMSERIALRX+NUMSLOTSOFF)
+// 1 + 3 + 3 + 2 = 9
+#define MAXACTIVESLOTS       (SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS+NUMSERIALRX+NUMSERIALTX+NUMSLOTSOFF)
 
 /**
 \brief Minimum backoff exponent.
@@ -94,7 +96,8 @@ typedef enum {
    CELLTYPE_RX               = 2,
    CELLTYPE_TXRX             = 3,
    CELLTYPE_SERIALRX         = 4,
-   CELLTYPE_MORESERIALRX     = 5
+   CELLTYPE_SERIALTX         = 5,
+   CELLTYPE_MORESERIALRX     = 6
 } cellType_t;
 
 typedef struct {
