@@ -47,7 +47,6 @@ typedef struct {
    uint16_t                   input_read;                // How much data is read by the mbedtls system calss
    bool                       state_busy;                // Busy with processing state 
    bool                       sending_busy;              // Busy with sending data 
-   uint8_t					  wait_backoff;
    tcp_resource_desc_t*       resources;                 
    mbedtls_entropy_context    entropy; 
    mbedtls_ctr_drbg_context   ctr_drbg; 

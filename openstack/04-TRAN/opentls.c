@@ -176,7 +176,7 @@ void opentls_handshake_cb(opentimers_id_t id){
 				opentimers_cancel(opentls_vars.timerId);
 				opentimers_scheduleAbsolute(
 					opentls_vars.timerId,
-					OPENTLS_SERVER_HELLO_TIMER,
+					OPENTLS_SERVER_CERTIFICATE_TIMER,
 					sctimer_readCounter(),
 					TIME_MS,
 					opentls_handshake_cb
@@ -375,7 +375,6 @@ void opentls_handshake_cb(opentimers_id_t id){
 	}
 	else {
 		opentimers_cancel(opentls_vars.timerId);
-
 		opentimers_scheduleAbsolute(
 			opentls_vars.timerId,
 			OPENTLS_ADDITIONAL_WAIT_TIMER,

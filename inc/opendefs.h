@@ -184,6 +184,7 @@ enum {
    COMPONENT_OPENTLS                   = 0x2c,
    COMPONENT_MBEDTLS                   = 0x2d,
    COMPONENT_FRAG                      = 0x2e,
+   COMPONENT_OPENDTLS				   = 0x2f,
 };
 
 /**
@@ -274,7 +275,7 @@ enum {
    ERR_BUFFER_OVERFLOW                 = 0x46, // OSCOAP buffer overflow detected {code location {0}}
    ERR_REPLAY_FAILED                   = 0x47, // OSCOAP replay protection failed
    ERR_DECRYPTION_FAILED               = 0x48, // OSCOAP decryption and tag verification failed
-   ERR_ABORT_JOIN_PROCESS              = 0x49, // Aborted join process {code location {0}}
+   ERR_ABORT_JOIN_PROCESS              = 0x49, // aborted join process {code location {0}}
    // apps
    ERR_SENDING_ECHO_REQ                = 0x50, // Sending an udp or tcp echo request @ ASN: {0}
    ERR_RECEIVED_ECHO_REQ               = 0x51, // Sending an udp or tcp echo request
@@ -329,6 +330,8 @@ enum {
    ERR_TCP_RETRANSMISSION_FAILED       = 0x82, // [RED]retransmission attempt failed[END]
    ERR_REASSEMBLE                      = 0x83, // reassemble 6lowpan fragments, size: {0}
    ERR_FAST_FORWARD                    = 0x84, // fast forward of 6lowpan packet
+   ERR_MBEDTLS_INIT_FAILED             = 0x85, // mbedtls init failed! (code location: {0})
+   ERR_OPENDTLS_RESET	               = 0x86, // resetting DTLS state machine in state {0}
 };
 
 //=========================== typedef =========================================
