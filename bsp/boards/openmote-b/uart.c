@@ -69,7 +69,7 @@ void uart_init(void) {
    // This function uses SysCtrlClockGet() to get the system clock
    // frequency.  This could be also be a variable or hard coded value
    // instead of a function call.
-   UARTConfigSetExpClk(UART0_BASE, SysCtrlIOClockGet(), 115200,
+   UARTConfigSetExpClk(UART0_BASE, SysCtrlIOClockGet(), 460800,
                       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |
                        UART_CONFIG_PAR_NONE));
 
