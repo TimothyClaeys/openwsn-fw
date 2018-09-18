@@ -21,26 +21,26 @@
 
 //=========================== define ==========================================
 
-#define TECHO_CONNECT_PERIOD     15000
-#define TECHO_PERIOD              3000
+#define TECHO_CONNECT_PERIOD	  15000
+#define TECHO_PERIOD		      3000
 
 //=========================== typedef =========================================
 
 enum TECHO_STATE_ENUMS {
-   TECHO_CLOSED         = 0,
-   TECHO_CONNECTING     = 1,
-   TECHO_CONNECTED      = 2,
-   TECHO_CLOSING        = 3
+	TECHO_CLOSED			= 0,
+	TECHO_CONNECTING	  = 1,
+	TECHO_CONNECTED		= 2,
+	TECHO_CLOSING		  = 3
 };
 
 //=========================== variables =======================================
 
 typedef struct { 
-   opentimers_id_t      timerId; 
-   uint16_t             statePeriod; 
-   uint8_t              state; 
-   tcp_resource_desc_t  desc;  ///< resource descriptor for this module, used to register at UDP stack 
-   bool                 echoed;
+	opentimers_id_t		 timerId; 
+	uint16_t			 statePeriod; 
+	uint8_t				 state; 
+	tcp_resource_desc_t  desc;  ///< resource descriptor for this module, used to register at UDP stack 
+	bool				 echoed;
 } techo_vars_t; 
 
 

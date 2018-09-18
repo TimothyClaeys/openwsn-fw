@@ -36,7 +36,6 @@ additionalSourceFiles = [
     #os.path.join('cjoin','cbor.c'),
     #os.path.join('uecho','uecho.c'),
     #os.path.join('techo','techo.c'),
-    os.path.join('s_techo','s_techo.c'),
 ]
 
 # header files that should be included in the build other than
@@ -47,14 +46,26 @@ additionalHeaderFiles = [
     #os.path.join('opencoap','cborencoder.h'),
     #os.path.join('uecho','uecho.h'),
     #os.path.join('techo','techo.h'),
-    os.path.join('s_techo','s_techo.h'),
 ]
+
+if localEnv['tls'] == 1:
+	additionalSourceFiles.append(os.path.join('s_techo','s_techo.h'))
+	additionalHeaderFiles.append(os.path.join('s_techo','s_techo.h'))
+
+if localEnv['dtls'] == 1:
+	additionalSourceFiles.append(os.path.join('s_uecho','s_uecho.h'))
+	additionalHeaderFiles.append(os.path.join('s_uecho','s_uecho.h'))
 
 # additional apps the user wants to build
 if localEnv['apps']:
     userApps  = localEnv['apps'].split(',')
 else:
-    userApps  = ['s_techo']
+    if localEnv['tls'] == 1:
+        userApps  = ['s_techo']
+    elif localEnv['dtls'] == 1:
+        userApps  = ['s_uecho']
+    else:
+        userApps = []
 
 # union of default and additional apps (without duplicates)
 apps      = []

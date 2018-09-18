@@ -22,7 +22,9 @@
 #include "uexpiration_monitor.h"
 
 #include "techo.h"
+#include "uecho.h"
 #include "s_techo.h"
+#include "u_techo.h"
 
 //=========================== variables =======================================
 
@@ -52,5 +54,12 @@ void openapps_init(void) {
    //umonitor_init();
 
    //techo_init();
+   
+#ifdef TLS_ENABLED
    s_techo_init();
+#endif
+
+#ifdef DTLS_ENABLED
+   s_uecho_init();
+#endif
 }

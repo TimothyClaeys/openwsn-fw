@@ -142,6 +142,8 @@ command_line_options = {
     'l2_security':      ['0','1'],
     'printf':           ['1','0'],          # 1=on (default),  0=off
     'deadline_option':  ['0','1'],
+    'tls':              ['0','1'],
+    'dtls':             ['0','1'],
     'ide':              ['none','qtcreator'],
     'revision':         ['']
 }
@@ -299,6 +301,20 @@ command_line_vars.AddVariables(
         'deadline_option',                                     # key
         '',                                                # help
         command_line_options['deadline_option'][1],            # default
+        validate_option,                                   # validator
+        int,                                               # converter
+    ),
+    (
+        'tls',		                                       # key
+        '',                                                # help
+        command_line_options['tls'][0],                    # default
+        validate_option,                                   # validator
+        int,                                               # converter
+    ),
+    (
+        'dtls',		                                       # key
+        '',                                                # help
+        command_line_options['dtls'][0],                   # default
         validate_option,                                   # validator
         int,                                               # converter
     ),

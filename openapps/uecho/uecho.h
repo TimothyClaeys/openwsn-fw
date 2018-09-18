@@ -9,23 +9,28 @@
 */
 
 #include "openudp.h"
+#include "opentimers.h"
+#include "scheduler.h"
+#include "IEEE802154E.h"
+
 
 //=========================== define ==========================================
+
+#define UECHO_PERIOD		10000
 
 //=========================== typedef =========================================
 
 //=========================== variables =======================================
 
 typedef struct {
-   udp_resource_desc_t desc;  ///< resource descriptor for this module, used to register at UDP stack
+	udp_resource_desc_t desc;  ///< resource descriptor for this module, used to register at UDP stack	
+	opentimers_id_t		timerId;
+	uint16_t			uechoPeriod;	
 } uecho_vars_t;
 
 //=========================== prototypes ======================================
 
 void uecho_init(void);
-void uecho_receive(OpenQueueEntry_t* msg);
-void uecho_sendDone(OpenQueueEntry_t* msg, owerror_t error);
-bool uecho_debugPrint(void);
 
 /**
 \}

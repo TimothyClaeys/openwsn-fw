@@ -30,7 +30,6 @@ sources_c = [
     #=== 04-TRAN
     os.path.join('04-TRAN','openudp.c'),
     os.path.join('04-TRAN','opentcp.c'),
-    os.path.join('04-TRAN','opentls.c'),
     #=== cross-layers
     os.path.join('cross-layers','idmanager.c'),
     os.path.join('cross-layers','openqueue.c'),
@@ -62,7 +61,6 @@ sources_h = [
     #=== 04-TRAN
     os.path.join('04-TRAN','openudp.h'),
     os.path.join('04-TRAN','opentcp.h'),
-    os.path.join('04-TRAN','opentls.h'),
     #=== cross-layers
     os.path.join('cross-layers','idmanager.h'),
     os.path.join('cross-layers','openqueue.h'),
@@ -71,6 +69,14 @@ sources_h = [
     #=== apps
     os.path.join('#','openapps','userialbridge','userialbridge.h'),
 ]
+
+if localEnv['tls'] == 1:
+	sources_c.append(os.path.join('04-TRAN','opentls.c'))
+	sources_h.append(os.path.join('04-TRAN','opentls.h'))
+
+if localEnv['dtls'] == 1:
+	sources_c.append(os.path.join('04-TRAN','opendtls.c'))
+	sources_h.append(os.path.join('04-TRAN','opendtls.h'))
 
 if localEnv['board']=='python':
     

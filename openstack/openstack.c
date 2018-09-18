@@ -35,6 +35,7 @@
 //-- 04-TRAN
 #include "opentcp.h"
 #include "opentls.h"
+#include "opendtls.h"
 #include "openudp.h"
 //===== applications
 #include "openapps.h"
@@ -77,8 +78,13 @@ void openstack_init(void) {
    icmpv6rpl_init();
    //-- 04-TRAN
    opentcp_init();
+#ifdef TLS_ENABLED      
    opentls_init();
+#endif
    openudp_init();
+#ifdef DTLS_ENABLED      
+   opendtls_init();
+#endif
    
    //===== applications
    openapps_init();

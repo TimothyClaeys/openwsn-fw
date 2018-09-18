@@ -52,6 +52,10 @@ if env['printf']==1:
     env.Append(CPPDEFINES    = 'OPENSERIAL_PRINTF')
 if env['deadline_option']==1:
     env.Append(CPPDEFINES    = 'DEADLINE_OPTION_ENABLED')
+if env['tls']==1:
+    env.Append(CPPDEFINES    = 'TLS_ENABLED')
+if env['dtls']==1:
+	env.Append(CPPDEFINES    = 'DTLS_ENABLED')
 
 if env['toolchain']=='mspgcc':
     

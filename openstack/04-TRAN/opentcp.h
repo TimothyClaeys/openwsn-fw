@@ -12,7 +12,7 @@
 
 //=========================== define ==========================================
 
-#define MAX_SMALL_PACKET_SIZE    64
+#define MAX_SMALL_SEGMENT_SIZE    64
 
 enum {
    TCP_INITIAL_SEQNUM             = 100,
