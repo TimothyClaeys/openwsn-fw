@@ -78,7 +78,6 @@ void scheduler_start(void) {
    }
    if (taskContainer>&scheduler_vars.taskBuf[TASK_LIST_DEPTH-1]) {
       // task list has overflown. This should never happpen!
-      return;   
       // we can not print from within the kernel. Instead:
       // blink the error LED
       leds_error_blink();

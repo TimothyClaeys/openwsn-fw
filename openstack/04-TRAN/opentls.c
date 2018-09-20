@@ -5,6 +5,7 @@
 #include "sctimer.h"
 
 #include "mbedtls/ssl.h"
+#include "mbedtls/platform.h"
 
 //======================= variables =====================
 
@@ -26,6 +27,8 @@ void opentls_receive(OpenQueueEntry_t* msg);
 void opentls_handshake_cb(opentimers_id_t id);
 
 void handshake_task(void);
+
+void mbedtls_platform_exit( int status );
 
 //======================= public =====================
 
@@ -58,6 +61,8 @@ void opentls_init() {
 	mbedtls_ssl_set_bio( &opentls_vars.ssl, NULL, opentls_internal_send, opentls_internal_read, NULL);
 	mbedtls_ssl_conf_authmode( &(opentls_vars.conf), MBEDTLS_SSL_VERIFY_NONE ); 
 
+	mbedtls_platform_set_exit( mbedtls_platform_exit );
+
 	opentls_vars.state_busy				 = FALSE;
 	opentls_vars.timerId = opentimers_create();
 }
@@ -83,7 +88,16 @@ void opentls_connect(open_addr_t* addr, uint16_t dest_port, uint16_t src_port){
 }
 
 void opentls_reset(){
-	
+    mbedtls_ssl_free( &opentls_vars.ssl );
+    mbedtls_ssl_config_free( &opentls_vars.conf );
+    mbedtls_ctr_drbg_free( &opentls_vars.ctr_drbg );
+    mbedtls_entropy_free( &opentls_vars.entropy );
+
+	opentls_vars.state_busy = FALSE;
+
+	opentimers_destroy( opentls_vars.timerId );
+
+	openserial_printError( COMPONENT_OPENTLS, ERR_OPENTLS_RESET, opentls_vars.ssl.state, 0);
 }
 
 uint8_t opentls_getCurrentState(){
@@ -412,6 +426,17 @@ void handshake_task(){
 		openserial_printInfo( COMPONENT_OPENTLS, ERR_TLS_TRUSTED_CERT, 0, 0);
 		openserial_printInfo( COMPONENT_OPENTLS, ERR_TLS_STATE_DONE, 0, 0);
 	}
+
+	else if ( ret == MBEDTLS_ERR_SSL_INSUFFICIENT_DATA ) { 
+		// not all of the requested data could be read but remove the data that was already read from the buffer
+		if ( opentls_vars.ssl.keep_current_message == 0 ){
+			//update_receive_buffer();  
+		}
+		
+		opentls_vars.state_busy = FALSE;  
+		openserial_printInfo( COMPONENT_OPENTLS, ERR_INSUFFICIENT_DATA, 0, 0 );
+	}
+
 	else if ( ret == MBEDTLS_ERR_SSL_CONN_EOF ) {
 		opentimers_cancel(opentls_vars.timerId);
 		opentimers_scheduleAbsolute(
@@ -426,7 +451,7 @@ void handshake_task(){
 		opentls_vars.state_busy = FALSE;  
 	}
 	else if (ret == MBEDTLS_ERR_MPI_ALLOC_FAILED ){
-		openserial_printError( COMPONENT_OPENTLS, ERR_TLS_MEM_ALLOC_FAILED, 0, 0);
+		openserial_printError( COMPONENT_OPENTLS, ERR_MBEDTLS_MEM_ALLOC_FAILED, 0, 0);
 		opentls_reset();
 	}
 	else {
@@ -459,4 +484,9 @@ void update_receive_buffer(){
 	// the read data got removed from the buffer
 	opentls_vars.input_read = 0;
 }
+
+void mbedtls_platform_exit( int status ){
+	opentls_reset();
+}
+
 

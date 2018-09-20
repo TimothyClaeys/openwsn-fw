@@ -4,6 +4,9 @@
 #include "openrandom.h"
 #include "sctimer.h"
 
+#include "mbedtls/ssl.h"
+#include "mbedtls/platform.h"
+
 
 //======================= variables =====================
 
@@ -29,6 +32,8 @@ void opendtls_handshake_cb(opentimers_id_t id);
 
 // dtls handshake task to be scheduled, works in conjunction with the state machine
 void handshake_task(void);
+
+void mbedtls_platform_exit( int status );
 
 //======================= public =====================
 
@@ -60,6 +65,8 @@ void opendtls_init() {
 	mbedtls_ssl_set_bio( &opendtls_vars.ssl, NULL, opendtls_internal_send, opendtls_internal_read, NULL);
 	mbedtls_ssl_conf_authmode( &(opendtls_vars.conf), MBEDTLS_SSL_VERIFY_NONE ); 
 
+	mbedtls_platform_set_exit( mbedtls_platform_exit );
+
 	opendtls_vars.state_busy = FALSE;
 	opendtls_vars.timerId = opentimers_create();
 
@@ -87,14 +94,7 @@ void opendtls_register(dtls_resource_desc_t *dtls_desc) {
 
 void opendtls_setup(){
 	if ( opendtls_vars.ssl.state == MBEDTLS_SSL_HELLO_REQUEST ){
-		// start the handshake state machine	
-		opentimers_scheduleAbsolute(
-			opendtls_vars.timerId,
-			OPENDTLS_HELLO_REQUEST_TIMER,
-			sctimer_readCounter(),
-			TIME_MS,
-			opendtls_handshake_cb
-		);
+		opendtls_handshake_cb(opendtls_vars.timerId);
 	}
 }
 
@@ -103,7 +103,7 @@ void opendtls_reset(){
     mbedtls_ssl_config_free( &opendtls_vars.conf );
     mbedtls_ctr_drbg_free( &opendtls_vars.ctr_drbg );
     mbedtls_entropy_free( &opendtls_vars.entropy );
-	
+    /*	
 	mbedtls_ctr_drbg_init( &(opendtls_vars.ctr_drbg) );
 	mbedtls_ssl_init( &(opendtls_vars.ssl) );	 
 	mbedtls_ssl_config_init( &(opendtls_vars.conf) );	 
@@ -130,7 +130,9 @@ void opendtls_reset(){
 	mbedtls_ssl_set_timer_cb( &opendtls_vars.ssl, &opendtls_vars.timer,  mbedtls_timing_set_delay, mbedtls_timing_get_delay);	
 	
 	mbedtls_ssl_conf_handshake_timeout( &(opendtls_vars.conf), 10000, 60000 );
-	
+	*/
+	opentimers_destroy( opendtls_vars.timerId );
+
 	opendtls_vars.state_busy = FALSE;
 
 	openserial_printInfo( COMPONENT_OPENDTLS, ERR_OPENDTLS_RESET, opendtls_vars.ssl.state, 0);
@@ -166,25 +168,6 @@ int opendtls_internal_read( void *ctx, unsigned char *buf, size_t len ){
 		return opendtls_vars.recv_datagram_length[0];
 	} 
 }
-
-/*
-void opendtls_internal_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms ){
-	mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
-
-	ctx->int_ms = int_ms;
-    ctx->fin_ms = fin_ms;
-
-    if( fin_ms != 0 )
-        (void) get_current_time( &ctx->timer, 1 );	
-}
-
-
-
-
-uint32_t opendtls_internal_get_delay( void *data ) {
-	return 32;
-}
-*/
 
 void opendtls_sendDone(OpenQueueEntry_t* msg, owerror_t error){
 	// Do nothing, the MAC layer has send our DTLS message
@@ -456,6 +439,14 @@ void handshake_task(){
 		opendtls_vars.state_busy = FALSE;  
 		openserial_printInfo( COMPONENT_OPENDTLS, ERR_TLS_STATE_DONE, 0, 0);
 	}
+	else if ( ret == MBEDTLS_ERR_SSL_CONTINUE_PROCESSING ) { 
+		// not all of the requested data could be read but remove the data that was already read from the buffer
+		if ( opendtls_vars.ssl.keep_current_message == 0 ){
+			opendtls_internal_update_receive_buffer();  
+		}
+		
+		opendtls_vars.state_busy = FALSE;  
+	}
 	/*
 	else if ( ret == -9774 ) { 
 		// not all of the requested data could be read but remove the data that was already read from the buffer
@@ -482,7 +473,7 @@ void handshake_task(){
 		opendtls_vars.state_busy = FALSE;  
 	}
 	else if (ret == MBEDTLS_ERR_MPI_ALLOC_FAILED ){
-		openserial_printError( COMPONENT_OPENDTLS, ERR_TLS_MEM_ALLOC_FAILED, 0, 0);
+		openserial_printError( COMPONENT_OPENDTLS, ERR_MBEDTLS_MEM_ALLOC_FAILED, 0, 0);
 		opendtls_reset();
 	}
 	else if (ret == MBEDTLS_ERR_SSL_WANT_READ ) {
@@ -534,4 +525,8 @@ void opendtls_internal_update_receive_buffer(){
 		openserial_printInfo( COMPONENT_OPENDTLS, ERR_UPDATE_READ_BUFFER, read, opendtls_vars.input_left ); 
 
 	}
+}
+
+void mbedtls_platform_exit( int status ){
+	opendtls_reset();
 }

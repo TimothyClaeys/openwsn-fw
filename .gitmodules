@@ -1,3 +1,4 @@
 [submodule "crypto/mbedtls"]
 	path = crypto/mbedtls
 	url = https://github.com/ARMmbed/mbedtls.git
+	branch = development

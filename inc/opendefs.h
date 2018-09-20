@@ -315,7 +315,7 @@ enum {
    ERR_WAITING_FOR_DATA                = 0x73, // [YELLOW]waiting for handshake data[END]
    ERR_WAITING_FOR_TX                  = 0x74, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
    ERR_BUSY_IN_STATE                   = 0x75, // [YELLOW]still processing previous state: {0}[END]
-   ERR_TLS_MEM_ALLOC_FAILED            = 0x76, // [RED]heap memory allocation failed (no more memory available)[END]
+   ERR_MBEDTLS_MEM_ALLOC_FAILED        = 0x76, // [RED]heap memory allocation failed (no more memory available)[END]
    ERR_UPDATE_DAGRANK                  = 0x77, // [GREEN]Received DIO and update DAGRANK: {0}[END]
    ERR_SEND_DAO                        = 0x78, // [GREEN]Sent DAO packet[END]
    ERR_NEW_ENTRY                       = 0x79, // [GREEN]Added new neighbor: {0} to neighbor table.[END]
@@ -332,6 +332,13 @@ enum {
    ERR_FAST_FORWARD                    = 0x84, // fast forward of 6lowpan packet
    ERR_MBEDTLS_INIT_FAILED             = 0x85, // mbedtls init failed! (code location: {0})
    ERR_OPENDTLS_RESET	               = 0x86, // resetting DTLS state machine in state {0}
+   ERR_INSUFFICIENT_DATA               = 0x87, // some data was received but not sufficient
+   ERR_OUT_OF_ORDER_DATAGRAM           = 0x88, // an out-of-order datagram was received
+   ERR_DTLS_DATAGRAM_BUFFERED		   = 0x89, // a dtls datagram was buffered
+   ERR_DTLS_BUFFER_FULL				   = 0x90, // [RED]dtls buffer for out-of-order messages is full: buffered: {0} capacity: {1}[END]
+   ERR_LOAD_BUFFERED_DTLS_MSG		   = 0x91, // load a buffered message
+   ERR_MBEDTLS_HEAP_USAGE			   = 0x92, // allocating heap memory, currently used: {0} -- max used: {1}
+   ERR_OPENTLS_RESET	               = 0x93, // [RED]resetting TLS state machine in state {0}[END]
 };
 
 //=========================== typedef =========================================
