@@ -13,7 +13,7 @@
 //=========================== define ==========================================
 
 #define DIO_PORTION               6   // The portion of minimal cells that used for sending DIO.
-#define TIMER_DAO_TIMEOUT         30  // seconds
+#define TIMER_DAO_TIMEOUT         7  // seconds
 
 // Non-Storing Mode of Operation (1)
 #define MOP_DIO_A                 0<<5

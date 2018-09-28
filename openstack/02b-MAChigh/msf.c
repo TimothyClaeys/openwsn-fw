@@ -16,6 +16,8 @@
 
 msf_vars_t msf_vars;
 
+#define BASE_TIMER  301
+
 //=========================== prototypes ======================================
 
 // sixtop callback 
@@ -48,7 +50,7 @@ void msf_init(void) {
     msf_vars.housekeepingTimerId = opentimers_create();
     opentimers_scheduleIn(
         msf_vars.housekeepingTimerId,
-        872 +(openrandom_get16b()&0xff),
+        BASE_TIMER +(openrandom_get16b()&0xff),
         TIME_MS,
         TIMER_ONESHOT,
         msf_timer_housekeeping_cb
@@ -165,7 +167,7 @@ void msf_timer_housekeeping_cb(opentimers_id_t id){
     // update the period
     opentimers_scheduleIn(
         msf_vars.housekeepingTimerId,
-        872 +(openrandom_get16b()&0xff),
+        BASE_TIMER +(openrandom_get16b()&0xff),
         TIME_MS,
         TIMER_ONESHOT,
         msf_timer_housekeeping_cb
