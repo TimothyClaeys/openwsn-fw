@@ -8,6 +8,8 @@
 #define __CRYPTO_ENGINE_H__
 
 #include "opendefs.h"
+#include <source/ecc_curveinfo.h>
+#include <source/pka.h>
 
 //=========================== define ==========================================
 #define CBC_MAX_MAC_SIZE  16
@@ -72,5 +74,24 @@ owerror_t cryptoengine_aes_ecb_enc(uint8_t buffer[16], uint8_t key[16]);
 \brief Initialization of the cryptoengine module.
 */
 owerror_t cryptoengine_init(void);
+
+owerror_t cryptoengine_load_group(tECCCurveInfo* crv);
+
+int cryptoengine_bignum_mult(uint32_t* X, uint8_t x_size, uint32_t* Y, uint8_t y_size, uint32_t* R, uint32_t* r_size);
+int cryptoengine_ecp_add(tECPt* ptEcPt1, tECPt* ptEcPt2, tECPt* ptEcPt3, tECCCurveInfo* ptCurve);
+int cryptoengine_bignum_mod(uint32_t* X, uint8_t x_size, uint32_t* mod, uint8_t mod_size, uint32_t* R, uint32_t r_size);
+int cryptoengine_bignum_inv_mod(uint32_t* X, uint8_t x_size, uint32_t* mod, uint8_t mod_size, uint32_t* R, uint32_t r_size);
+int cryptoengine_bignum_add(uint32_t* X, uint8_t x_size, uint32_t* mod, uint8_t mod_size, uint32_t* R, uint32_t* r_size);
+int cryptoengine_bignum_cmp(uint32_t* X, uint32_t* Y, uint8_t size);
+
+owerror_t cryptoengine_ecdsa_verify(
+	tECCCurveInfo* crv,
+	tECPt* Q,
+	uint32_t* s, 
+	uint8_t s_size, 
+	uint32_t* r,
+	uint8_t r_size,
+	uint32_t* hash,
+	uint8_t hash_len);
 
 #endif /* __CRYPTO_ENGINE_H__ */
