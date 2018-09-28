@@ -8,7 +8,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "debugpins.h"
 #include "opendefs.h"
 #include "openserial.h"
 #include "IEEE802154E.h"
@@ -386,7 +385,6 @@ void openserial_startOutput(void) {
     INTERRUPT_DECLARATION();
     
     //=== made modules print debug information
-	debugpins_frame_clr();   
  
     DISABLE_INTERRUPTS();
     openserial_vars.debugPrintCounter = (openserial_vars.debugPrintCounter+1)%STATUS_MAX;
@@ -468,7 +466,6 @@ void openserial_startOutput(void) {
             &openserial_vars.outputBufIdxW
         );
 #else
-		debugpins_frame_set();   
         uart_writeByte(openserial_vars.outputBuf[OUTPUT_BUFFER_MASK & (openserial_vars.outputBufIdxR++)]);
 #endif
     } else {
@@ -967,7 +964,6 @@ void isr_openserial_tx(void) {
             break;
         case MODE_OUTPUT:
             if (openserial_vars.outputBufIdxW==openserial_vars.outputBufIdxR) {
-				debugpins_frame_clr();   
                 openserial_vars.outputBufFilled = FALSE;
             }
             if (openserial_vars.outputBufFilled) {
