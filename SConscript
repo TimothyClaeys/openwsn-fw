@@ -56,6 +56,8 @@ if env['tls']==1:
     env.Append(CPPDEFINES    = 'TLS_ENABLED')
 if env['dtls']==1:
 	env.Append(CPPDEFINES    = 'DTLS_ENABLED')
+if env['hw_crypto']==1:
+	env.Append(CPPDEFINES    = 'HW_CRYPTO')
 
 if env['toolchain']=='mspgcc':
     

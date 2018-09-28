@@ -144,6 +144,7 @@ command_line_options = {
     'deadline_option':  ['0','1'],
     'tls':              ['0','1'],
     'dtls':             ['0','1'],
+    'hw_crypto':        ['0','1'],
     'ide':              ['none','qtcreator'],
     'revision':         ['']
 }
@@ -315,6 +316,13 @@ command_line_vars.AddVariables(
         'dtls',		                                       # key
         '',                                                # help
         command_line_options['dtls'][0],                   # default
+        validate_option,                                   # validator
+        int,                                               # converter
+    ),
+    (
+        'hw_crypto',                                       # key
+        '',                                                # help
+        command_line_options['hw_crypto'][0],              # default
         validate_option,                                   # validator
         int,                                               # converter
     ),
