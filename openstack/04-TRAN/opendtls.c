@@ -74,7 +74,7 @@ void opendtls_init() {
 	mbedtls_ssl_conf_authmode( &(opendtls_vars.conf), MBEDTLS_SSL_VERIFY_NONE ); 
 	mbedtls_ssl_set_timer_cb( &opendtls_vars.ssl, &opendtls_vars.timer,  mbedtls_timing_set_delay, mbedtls_timing_get_delay);	
 
-	mbedtls_ssl_conf_handshake_timeout( &(opendtls_vars.conf), 3000, 60000 );
+	mbedtls_ssl_conf_handshake_timeout( &(opendtls_vars.conf), 10000, 60000 );
 }
 
 void opendtls_register(dtls_resource_desc_t *dtls_desc) {
