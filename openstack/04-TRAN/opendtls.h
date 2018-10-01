@@ -35,7 +35,13 @@
 #define OPENDTLS_CERTIFICATE_REQ_TIMER        100
 #define OPENDTLS_SERVER_HELLO_DONE	          75
 #define OPENDTLS_CLIENT_CERT_TIMER            75
+
+#ifdef HW_CRYPTO
+#define OPENDTLS_CLIENT_KEX_TIMER             2000
+#else
 #define OPENDTLS_CLIENT_KEX_TIMER             3400
+#endif
+
 #define OPENDTLS_CERT_VERIFY_TIMER            100
 #define OPENDTLS_CLIENT_CHANGE_CIPHER_SPEC    200
 #define OPENDTLS_CLIENT_FINISHED              75
