@@ -1,4 +1,4 @@
 [submodule "crypto/mbedtls"]
 	path = crypto/mbedtls
-	url = https://github.com/ARMmbed/mbedtls.git
-	branch = development
+	url = https://github.com/TimothyClaeys/mbedtls-openwsn.git
+	branch = openwsn_mbedtls
