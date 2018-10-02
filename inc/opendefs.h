@@ -21,7 +21,7 @@
 
 static const uint8_t infoStackName[] = "OpenWSN ";
 #define OPENWSN_VERSION_MAJOR     1
-#define OPENWSN_VERSION_MINOR     11
+#define OPENWSN_VERSION_MINOR     17
 #define OPENWSN_VERSION_PATCH     0
 
 #ifndef TRUE
@@ -135,11 +135,11 @@ enum {
    //MAClow
    COMPONENT_IEEE802154                = 0x08,
    COMPONENT_IEEE802154E               = 0x09,
-   
+
    // all components with higher component id than COMPONENT_IEEE802154E
-   // won't be able to get free packets from the queue 
+   // won't be able to get free packets from the queue
    // when the mote is not synch
-   
+
    //MAClow<->MAChigh ("virtual components")
    COMPONENT_SIXTOP_TO_IEEE802154E     = 0x0a,
    COMPONENT_IEEE802154E_TO_SIXTOP     = 0x0b,
@@ -200,7 +200,7 @@ enum {
    ERR_RCVD_ECHO_REPLY                 = 0x02, // received an echo reply
    ERR_GETDATA_ASKS_TOO_FEW_BYTES      = 0x03, // getData asks for too few bytes, maxNumBytes={0}, fill level={1}
    ERR_INPUT_BUFFER_OVERFLOW           = 0x04, // the input buffer has overflown
-   ERR_COMMAND_NOT_ALLOWED             = 0x05, // the command is not allowed, command = {0} 
+   ERR_COMMAND_NOT_ALLOWED             = 0x05, // the command is not allowed, command = {0}
    // l4
    ERR_WRONG_TRAN_PROTOCOL             = 0x06, // unknown transport protocol {0} (code location {1})
    ERR_WRONG_TCP_STATE                 = 0x07, // wrong TCP state {0} (code location {1})

@@ -66,23 +66,20 @@ void inputHdlcOpen(void);
 void inputHdlcWrite(uint8_t b);
 void inputHdlcClose(void);
 
-// sniffer
-void sniffer_setListeningChannel(uint8_t channel);
-
 //=========================== public ==========================================
 
 //===== admin
 
 void openserial_init(void) {
     uint16_t crc;
-    
+
     // reset variable
     memset(&openserial_vars,0,sizeof(openserial_vars_t));
-    
+
     // admin
     openserial_vars.mode               = MODE_OFF;
     openserial_vars.debugPrintCounter  = 0;
-    
+
     // input
     openserial_vars.reqFrame[0]        = HDLC_FLAG;
     openserial_vars.reqFrame[1]        = SERFRAME_MOTE2PC_REQUEST;
@@ -97,12 +94,12 @@ void openserial_init(void) {
     openserial_vars.busyReceiving      = FALSE;
     openserial_vars.inputEscaping      = FALSE;
     openserial_vars.inputBufFill       = 0;
-    
+
     // ouput
     openserial_vars.outputBufFilled    = FALSE;
     openserial_vars.outputBufIdxR      = 0;
     openserial_vars.outputBufIdxW      = 0;
-    
+
     // set callbacks
     uart_setCallbacks(
         isr_openserial_tx,
@@ -124,7 +121,7 @@ owerror_t openserial_printStatus(
 ) {
     uint8_t i;
     INTERRUPT_DECLARATION();
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.outputBufFilled  = TRUE;
     outputHdlcOpen();
@@ -137,7 +134,7 @@ owerror_t openserial_printStatus(
     }
     outputHdlcClose();
     ENABLE_INTERRUPTS();
-    
+
     return E_SUCCESS;
 }
 
@@ -164,7 +161,7 @@ owerror_t openserial_printError(
 ) {
     // toggle error LED
     leds_error_toggle();
-    
+
     return openserial_printInfoErrorCritical(
         SERFRAME_MOTE2PC_ERROR,
         calling_component,
@@ -180,12 +177,12 @@ owerror_t openserial_printCritical(
     errorparameter_t    arg1,
     errorparameter_t    arg2
 ) {
-    opentimers_id_t id; 
+    opentimers_id_t id;
     uint32_t         reference;
-        
+
     // blink error LED, this is serious
     leds_error_blink();
-    
+
     // schedule for the mote to reboot in 10s
     id        = opentimers_create();
     reference = opentimers_getValue();
@@ -196,7 +193,7 @@ owerror_t openserial_printCritical(
         TIME_MS,                        // timetype
         openserial_board_reset_cb       // callback
     );
-    
+
     return openserial_printInfoErrorCritical(
         SERFRAME_MOTE2PC_CRITICAL,
         calling_component,
@@ -210,10 +207,10 @@ owerror_t openserial_printData(uint8_t* buffer, uint8_t length) {
     uint8_t  i;
     uint8_t  asn[5];
     INTERRUPT_DECLARATION();
-    
+
     // retrieve ASN
     ieee154e_getAsn(asn);
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.outputBufFilled  = TRUE;
     outputHdlcOpen();
@@ -230,14 +227,14 @@ owerror_t openserial_printData(uint8_t* buffer, uint8_t length) {
     }
     outputHdlcClose();
     ENABLE_INTERRUPTS();
-    
+
     return E_SUCCESS;
 }
 
 owerror_t openserial_printSniffedPacket(uint8_t* buffer, uint8_t length, uint8_t channel) {
     uint8_t  i;
     INTERRUPT_DECLARATION();
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.outputBufFilled  = TRUE;
     outputHdlcOpen();
@@ -249,9 +246,9 @@ owerror_t openserial_printSniffedPacket(uint8_t* buffer, uint8_t length, uint8_t
     }
     outputHdlcWrite(channel);
     outputHdlcClose();
-    
+
     ENABLE_INTERRUPTS();
-    
+
     return E_SUCCESS;
 }
 
@@ -282,10 +279,10 @@ owerror_t openserial_print_str(char* buffer, uint8_t length) {
    uint8_t  i;
    uint8_t  asn[5];
    INTERRUPT_DECLARATION();
-   
+
    // retrieve ASN
    ieee154e_getAsn(asn);
-   
+
    DISABLE_INTERRUPTS();
    openserial_vars.outputBufFilled  = TRUE;
    outputHdlcOpen();
@@ -299,9 +296,9 @@ owerror_t openserial_print_str(char* buffer, uint8_t length) {
       outputHdlcWrite(buffer[i]);
    outputHdlcClose();
    ENABLE_INTERRUPTS();
-   
+
 #endif
-   
+
    return E_SUCCESS;
 }
 
@@ -310,11 +307,11 @@ owerror_t openserial_print_str(char* buffer, uint8_t length) {
 uint8_t openserial_getInputBufferFilllevel(void) {
     uint8_t inputBufFill;
     INTERRUPT_DECLARATION();
-    
+
     DISABLE_INTERRUPTS();
     inputBufFill = openserial_vars.inputBufFill;
     ENABLE_INTERRUPTS();
-    
+
     return inputBufFill-1; // removing the command byte
 }
 
@@ -322,11 +319,11 @@ uint8_t openserial_getInputBuffer(uint8_t* bufferToWrite, uint8_t maxNumBytes) {
     uint8_t numBytesWritten;
     uint8_t inputBufFill;
     INTERRUPT_DECLARATION();
-    
+
     DISABLE_INTERRUPTS();
     inputBufFill = openserial_vars.inputBufFill;
     ENABLE_INTERRUPTS();
-     
+
     if (maxNumBytes<inputBufFill-1) {
         openserial_printError(
             COMPONENT_OPENSERIAL,
@@ -339,7 +336,7 @@ uint8_t openserial_getInputBuffer(uint8_t* bufferToWrite, uint8_t maxNumBytes) {
         numBytesWritten = inputBufFill-1;
         memcpy(bufferToWrite,&(openserial_vars.inputBuf[1]),numBytesWritten);
     }
-    
+
     return numBytesWritten;
 }
 
@@ -347,7 +344,7 @@ uint8_t openserial_getInputBuffer(uint8_t* bufferToWrite, uint8_t maxNumBytes) {
 
 void openserial_startInput(void) {
     INTERRUPT_DECLARATION();
-    
+
     if (openserial_vars.inputBufFill>0) {
         openserial_printError(
             COMPONENT_OPENSERIAL,
@@ -359,11 +356,11 @@ void openserial_startInput(void) {
         openserial_vars.inputBufFill=0;
         ENABLE_INTERRUPTS();
     }
-    
+
     uart_clearTxInterrupts();
     uart_clearRxInterrupts();      // clear possible pending interrupts
     uart_enableInterrupts();       // Enable USCI_A1 TX & RX interrupt
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.busyReceiving  = FALSE;
     openserial_vars.mode           = MODE_INPUT;
@@ -383,26 +380,23 @@ void openserial_startInput(void) {
 void openserial_startOutput(void) {
     uint8_t debugPrintCounter;
     INTERRUPT_DECLARATION();
-    
+
     //=== made modules print debug information
- 
+
     DISABLE_INTERRUPTS();
     openserial_vars.debugPrintCounter = (openserial_vars.debugPrintCounter+1)%STATUS_MAX;
     debugPrintCounter = openserial_vars.debugPrintCounter;
     ENABLE_INTERRUPTS();
-    
+
     switch (debugPrintCounter) {
-		/*
         case STATUS_ISSYNC:
             if (debugPrint_isSync()==TRUE) {
                 break;
             }
-		*/
         case STATUS_ID:
             if (debugPrint_id()==TRUE) {
                break;
             }
-		/*
         case STATUS_DAGRANK:
             if (debugPrint_myDAGrank()==TRUE) {
                 break;
@@ -443,19 +437,18 @@ void openserial_startOutput(void) {
             if (debugPrint_joined()==TRUE) {
                 break;
             }
-		*/
         default:
             DISABLE_INTERRUPTS();
-            //openserial_vars.debugPrintCounter=0;
+            openserial_vars.debugPrintCounter=0;
             ENABLE_INTERRUPTS();
     }
-    
+
     //=== flush TX buffer
-    
+
     uart_clearTxInterrupts();
     uart_clearRxInterrupts();          // clear possible pending interrupts
     uart_enableInterrupts();           // Enable USCI_A1 TX & RX interrupt
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.mode=MODE_OUTPUT;
     if (openserial_vars.outputBufFilled) {
@@ -491,7 +484,7 @@ void openserial_stop(void) {
     DISABLE_INTERRUPTS();
     openserial_vars.mode=MODE_OFF;
     ENABLE_INTERRUPTS();
-    
+
     // the inputBuffer has to be reset if it is not reset where the data is read.
     // or the function openserial_getInputBuffer is called (which resets the buffer)
     if (busyReceiving==TRUE) {
@@ -502,7 +495,7 @@ void openserial_stop(void) {
             (errorparameter_t)inputBufFill
         );
     }
-    
+
     if (busyReceiving==FALSE && inputBufFill>0) {
         DISABLE_INTERRUPTS();
         cmdByte = openserial_vars.inputBuf[0];
@@ -528,11 +521,11 @@ void openserial_stop(void) {
         }
         // call registered commands
         if (openserial_vars.registeredCmd!=NULL && openserial_vars.registeredCmd->cmdId==cmdByte) {
-            
+
             openserial_vars.registeredCmd->cb();
         }
     }
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.inputBufFill  = 0;
     openserial_vars.busyReceiving = FALSE;
@@ -552,18 +545,18 @@ status information about several modules in the OpenWSN stack.
 bool debugPrint_outBufferIndexes(void) {
     uint16_t temp_buffer[2];
     INTERRUPT_DECLARATION();
-    
+
     DISABLE_INTERRUPTS();
     temp_buffer[0] = openserial_vars.outputBufIdxW;
     temp_buffer[1] = openserial_vars.outputBufIdxR;
     ENABLE_INTERRUPTS();
-    
+
     openserial_printStatus(
         STATUS_OUTBUFFERINDEXES,
         (uint8_t*)temp_buffer,
         sizeof(temp_buffer)
     );
-    
+
     return TRUE;
 }
 
@@ -579,7 +572,7 @@ owerror_t openserial_printInfoErrorCritical(
     errorparameter_t arg2
 ) {
     INTERRUPT_DECLARATION();
-    
+
     DISABLE_INTERRUPTS();
     openserial_vars.outputBufFilled  = TRUE;
     outputHdlcOpen();
@@ -594,7 +587,7 @@ owerror_t openserial_printInfoErrorCritical(
     outputHdlcWrite((uint8_t) (arg2 & 0x00ff));
     outputHdlcClose();
     ENABLE_INTERRUPTS();
-    
+
     return E_SUCCESS;
 }
 
@@ -609,19 +602,19 @@ void openserial_handleEcho(uint8_t* buf, uint8_t bufLen){
 }
 
 void openserial_get6pInfo(uint8_t commandId, uint8_t* code,uint8_t* cellOptions,uint8_t* numCells,cellInfo_ht* celllist_add,cellInfo_ht* celllist_delete,uint8_t* listOffset,uint8_t* maxListLen,uint8_t ptr, uint8_t commandLen){
-    uint8_t i; 
+    uint8_t i;
     uint8_t celllistLen;
-    
+
     // clear command
     if (commandId == COMMAND_SET_6P_CLEAR){
         *code = IANA_6TOP_CMD_CLEAR;
         return;
     }
-    
+
     *cellOptions  = openserial_vars.inputBuf[ptr];
     ptr          += 1;
     commandLen   -= 1;
-    
+
     // list command
     if (commandId == COMMAND_SET_6P_LIST){
         *code = IANA_6TOP_CMD_LIST;
@@ -631,17 +624,17 @@ void openserial_get6pInfo(uint8_t commandId, uint8_t* code,uint8_t* cellOptions,
         ptr += 1;
         return;
     }
-    
+
     // count command
     if (commandId == COMMAND_SET_6P_COUNT){
         *code = IANA_6TOP_CMD_COUNT;
         return;
     }
-    
+
     *numCells   = openserial_vars.inputBuf[ptr];
     ptr        += 1;
     commandLen -= 1;
-    
+
     // add command
     if (commandId == COMMAND_SET_6P_ADD){
         *code = IANA_6TOP_CMD_ADD;
@@ -675,7 +668,7 @@ void openserial_get6pInfo(uint8_t commandId, uint8_t* code,uint8_t* cellOptions,
         }
         return;
     }
-    
+
     // relocate command
     if (commandId == COMMAND_SET_6P_RELOCATE){
         *code = IANA_6TOP_CMD_RELOCATE;
@@ -688,7 +681,7 @@ void openserial_get6pInfo(uint8_t commandId, uint8_t* code,uint8_t* cellOptions,
             ptr         += 1;
             i++;
         }
-        
+
         commandLen      -= (*numCells) * 2;
         ptr             += *numCells;
         // retrieve cell list to be relocated
@@ -713,19 +706,19 @@ void openserial_handleCommands(void){
     uint8_t  commandLen;
     uint8_t  comandParam_8;
     uint16_t comandParam_16;
-    
+
     uint8_t  code,cellOptions,numCell,listOffset,maxListLen;
     uint8_t  ptr;
     cellInfo_ht celllist_add[CELLLIST_MAX_LEN];
     cellInfo_ht celllist_delete[CELLLIST_MAX_LEN];
-   
+
     open_addr_t neighbor;
     bool        foundNeighbor;
-    
+
     ptr = 0;
     memset(celllist_add,0,CELLLIST_MAX_LEN*sizeof(cellInfo_ht));
     memset(celllist_delete,0,CELLLIST_MAX_LEN*sizeof(cellInfo_ht));
-    
+
     numDataBytes = openserial_getInputBufferFilllevel();
     //copying the buffer
     openserial_getInputBuffer(&(input_buffer[ptr]),numDataBytes);
@@ -734,7 +727,7 @@ void openserial_handleCommands(void){
     ptr++;
     commandLen = openserial_vars.inputBuf[ptr];
     ptr++;
-    
+
     switch(commandId) {
         case COMMAND_SET_EBPERIOD:
             comandParam_8 = openserial_vars.inputBuf[ptr];
@@ -744,27 +737,25 @@ void openserial_handleCommands(void){
            comandParam_8 = openserial_vars.inputBuf[ptr];
            // set communication channel for protocol stack
            ieee154e_setSingleChannel(comandParam_8); // one byte
-           // set listenning channel for sniffer
-           sniffer_setListeningChannel(comandParam_8); // one byte
            break;
         case COMMAND_SET_KAPERIOD: // two bytes, in slots
             comandParam_16 = (openserial_vars.inputBuf[ptr] & 0x00ff) | \
-                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00); 
+                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00);
             sixtop_setKaPeriod(comandParam_16);
             break;
         case COMMAND_SET_DIOPERIOD: // two bytes, in mili-seconds
             comandParam_16 = (openserial_vars.inputBuf[ptr] & 0x00ff) | \
-                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00); 
+                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00);
             icmpv6rpl_setDIOPeriod(comandParam_16);
             break;
         case COMMAND_SET_DAOPERIOD: // two bytes, in mili-seconds
             comandParam_16 = (openserial_vars.inputBuf[ptr] & 0x00ff) | \
-                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00); 
+                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00);
             icmpv6rpl_setDAOPeriod(comandParam_16);
             break;
         case COMMAND_SET_DAGRANK: // two bytes
             comandParam_16 = (openserial_vars.inputBuf[ptr] & 0x00ff) | \
-                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00); 
+                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00);
             icmpv6rpl_setMyDAGrank(comandParam_16);
             break;
         case COMMAND_SET_SECURITY_STATUS: // one byte
@@ -773,7 +764,7 @@ void openserial_handleCommands(void){
             break;
         case COMMAND_SET_SLOTFRAMELENGTH: // two bytes
             comandParam_16 = (openserial_vars.inputBuf[ptr] & 0x00ff) | \
-                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00); 
+                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00);
             schedule_setFrameLength(comandParam_16);
             break;
         case COMMAND_SET_ACK_STATUS:
@@ -807,7 +798,7 @@ void openserial_handleCommands(void){
             break;
         case COMMAND_SET_SLOTDURATION:
             comandParam_16 = (openserial_vars.inputBuf[ptr] & 0x00ff) | \
-                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00); 
+                ((openserial_vars.inputBuf[ptr+1]<<8) & 0xff00);
             ieee154e_setSlotDuration(comandParam_16);
             break;
         case COMMAND_SET_6PRESPONSE:
@@ -818,7 +809,7 @@ void openserial_handleCommands(void){
                 if (comandParam_8 == 0) {
                     sixtop_setIsResponseEnabled(FALSE);
                 } else {
-                    // security only can be 1 or 0 
+                    // security only can be 1 or 0
                     break;
                 }
             }
@@ -853,6 +844,7 @@ void openserial_handleCommands(void){
 //===== misc
 
 void openserial_board_reset_cb(opentimers_id_t id) {
+    (void)id;
     board_reset();
 }
 
@@ -872,10 +864,10 @@ port_INLINE void outputHdlcOpen(void) {
 \brief Add a byte to the outgoing HDLC frame being built.
 */
 port_INLINE void outputHdlcWrite(uint8_t b) {
-    
+
     // iterate through CRC calculator
     openserial_vars.outputCrc = crcIteration(openserial_vars.outputCrc,b);
-    
+
     // add byte to buffer
     if (b==HDLC_FLAG || b==HDLC_ESCAPE) {
         openserial_vars.outputBuf[OUTPUT_BUFFER_MASK & (openserial_vars.outputBufIdxW++)]   = HDLC_ESCAPE;
@@ -923,11 +915,11 @@ port_INLINE void inputHdlcWrite(uint8_t b) {
             b                             = b^HDLC_ESCAPE_MASK;
             openserial_vars.inputEscaping = FALSE;
         }
-        
+
         // add byte to input buffer
         openserial_vars.inputBuf[openserial_vars.inputBufFill] = b;
         openserial_vars.inputBufFill++;
-        
+
         // iterate through CRC calculator
         openserial_vars.inputCrc = crcIteration(openserial_vars.inputCrc,b);
     }
@@ -936,16 +928,16 @@ port_INLINE void inputHdlcWrite(uint8_t b) {
 \brief Finalize the incoming HDLC frame.
 */
 port_INLINE void inputHdlcClose(void) {
-    
+
     // verify the validity of the frame
     if (openserial_vars.inputCrc==HDLC_CRCGOOD) {
         // the CRC is correct
-        
+
         // remove the CRC from the input buffer
         openserial_vars.inputBufFill    -= 2;
     } else {
         // the CRC is incorrect
-        
+
         // drop the incoming fram
         openserial_vars.inputBufFill     = 0;
     }
@@ -990,7 +982,7 @@ void isr_openserial_rx(void) {
     rxbyte = uart_readByte();
     // keep length
     inputBufFill=openserial_vars.inputBufFill;
-    
+
     if (
         openserial_vars.busyReceiving==FALSE  &&
         openserial_vars.lastRxByte==HDLC_FLAG &&
@@ -1031,10 +1023,10 @@ void isr_openserial_rx(void) {
         rxbyte==HDLC_FLAG
     ) {
         // end of frame
-        
+
         // finalize the HDLC frame
         inputHdlcClose();
-        
+
         if (openserial_vars.inputBufFill==0){
             // invalid HDLC frame
             openserial_printError(
@@ -1044,11 +1036,11 @@ void isr_openserial_rx(void) {
                 (errorparameter_t)0
             );
         }
-         
+
         openserial_vars.busyReceiving      = FALSE;
         openserial_stop();
     }
-    
+
     openserial_vars.lastRxByte = rxbyte;
 }
 

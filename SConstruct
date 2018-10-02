@@ -129,24 +129,25 @@ command_line_options = {
         'openos',
         'freertos',
     ],
-    'fet_version':      ['2','3'],
-    'verbose':          ['0','1'],
-    'fastsim':          ['1','0'],
-    'simhost':          ['amd64-linux','x86-linux','amd64-windows','x86-windows'],
-    'simhostpy':        [''],                               # No reasonable default
-    'panid':            [''],
-    'dagroot':          ['0','1'],
-    'forcetopology':    ['0','1'],
-    'debug':            ['0','1'],
-    'noadaptivesync':   ['0','1'],
-    'l2_security':      ['0','1'],
-    'printf':           ['1','0'],          # 1=on (default),  0=off
-    'deadline_option':  ['0','1'],
-    'tls':              ['0','1'],
-    'dtls':             ['0','1'],
-    'hw_crypto':        ['0','1'],
-    'ide':              ['none','qtcreator'],
-    'revision':         ['']
+    'fet_version':      		['2','3'],
+    'verbose':          		['0','1'],
+    'fastsim':          		['1','0'],
+    'simhost':          		['amd64-linux','x86-linux','amd64-windows','x86-windows'],
+    'simhostpy':        		[''],                               # No reasonable default
+    'panid':            		[''],
+    'dagroot':          		['0','1'],
+    'forcetopology':    		['0','1'],
+    'debug':            		['0','1'],
+    'noadaptivesync':   		['0','1'],
+    'l2_security':      		['0','1'],
+    'printf':           		['1','0'],          # 1=on (default),  0=off
+    'deadline_option':  		['0','1'],
+    'tls':              		['0','1'],
+    'msf_adapting_to_traffic':  ['0','1'],
+    'dtls':             		['0','1'],
+    'hw_crypto':        		['0','1'],
+    'ide':              		['none','qtcreator'],
+    'revision':         		['']
 }
 
 def validate_option(key, value, env):
@@ -185,6 +186,13 @@ command_line_vars.AddVariables(
         command_line_options['board'][0],                  # default
         validate_option,                                   # validator
         None,                                              # converter
+    ),
+    (
+        'msf_adapting_to_traffic',                         # key
+        '',                                                # help
+        command_line_options['msf_adapting_to_traffic'][1],# default
+        validate_option,                                   # validator
+        int,                                               # converter
     ),
     (
         'toolchain',                                       # key

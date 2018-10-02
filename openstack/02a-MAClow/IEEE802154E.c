@@ -545,6 +545,11 @@ port_INLINE void activity_synchronize_newSlot(void) {
         // configure the radio to listen to the default synchronizing channel
         radio_setFrequency(ieee154e_vars.freq);
         
+#ifdef SLOT_FSM_IMPLEMENTATION_MULTIPLE_TIMER_INTERRUPT
+        sctimer_setCapture(ACTION_RX_SFD_DONE);
+        sctimer_setCapture(ACTION_RX_DONE);       
+#endif
+        
         // switch on the radio in Rx mode.
         radio_rxEnable();
         radio_rxNow();
@@ -552,6 +557,15 @@ port_INLINE void activity_synchronize_newSlot(void) {
         // I'm listening last slot
         ieee154e_stats.numTicsOn    += ieee154e_vars.slotDuration;
         ieee154e_stats.numTicsTotal += ieee154e_vars.slotDuration;
+        
+#ifdef SLOT_FSM_IMPLEMENTATION_MULTIPLE_TIMER_INTERRUPT
+        sctimer_setCapture(ACTION_RX_SFD_DONE);
+        sctimer_setCapture(ACTION_RX_DONE);       
+#endif
+        
+        // switch on the radio in Rx mode.
+        radio_rxEnable();
+        radio_rxNow();
     }
     
     // if I'm already in S_SYNCLISTEN, while not synchronized,
@@ -566,6 +580,11 @@ port_INLINE void activity_synchronize_newSlot(void) {
         
         // configure the radio to listen to the default synchronizing channel
         radio_setFrequency(ieee154e_vars.freq);
+        
+#ifdef SLOT_FSM_IMPLEMENTATION_MULTIPLE_TIMER_INTERRUPT
+        sctimer_setCapture(ACTION_RX_SFD_DONE);
+        sctimer_setCapture(ACTION_RX_DONE);       
+#endif
         
         // switch on the radio in Rx mode.
         radio_rxEnable();
@@ -2332,7 +2351,7 @@ port_INLINE void incrementAsnOffset(void) {
    } else {
       ieee154e_vars.slotOffset  = (ieee154e_vars.slotOffset+1)%frameLength;
    }
-   ieee154e_vars.asnOffset   = (ieee154e_vars.asnOffset+1)%16;
+   ieee154e_vars.asnOffset   = (ieee154e_vars.asnOffset+1)% NUM_CHANNELS;
 }
 
 port_INLINE void ieee154e_resetAsn(void) {

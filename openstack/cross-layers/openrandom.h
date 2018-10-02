@@ -19,13 +19,14 @@
 extern uint32_t __SRAM_seed;
 
 typedef struct {
-   uint16_t shift_reg;  // Galois shift register used to obtain a pseudo-random number
+    uint16_t shift_reg;  // Galois shift register used to obtain a pseudo-random number
 } random_vars_t;
 
 //=========================== prototypes ======================================
 
 void     openrandom_init(void);
 uint16_t openrandom_get16b(void);
+uint16_t openrandom_getRandomizePeriod(uint16_t period, uint16_t range);
 
 /**
 \}
