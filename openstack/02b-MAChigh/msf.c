@@ -16,8 +16,6 @@
 
 msf_vars_t msf_vars;
 
-#define BASE_TIMER  301
-
 //=========================== prototypes ======================================
 
 // sixtop callback

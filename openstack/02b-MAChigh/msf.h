@@ -20,10 +20,10 @@
 #define LIM_NUMCELLSUSED_HIGH          12
 #define LIM_NUMCELLSUSED_LOW            4
 
-#define HOUSEKEEPING_PERIOD          15000 // miliseconds
+#define HOUSEKEEPING_PERIOD          30000 // miliseconds
 #define QUARANTINE_DURATION            300 // seconds
-#define WAITDURATION_MIN             10000 // miliseconds
-#define WAITDURATION_RANDOM_RANGE    10000 // miliseconds
+#define WAITDURATION_MIN             30000 // miliseconds
+#define WAITDURATION_RANDOM_RANGE    30000 // miliseconds
 
 //=========================== typedef =========================================
 
