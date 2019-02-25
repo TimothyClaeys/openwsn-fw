@@ -12,7 +12,7 @@
 int mote_main(void) {
 
 #if (defined DTLS_ENABLED) || (defined TLS_ENABLED)
-   unsigned char memory_buf[17000];
+   unsigned char memory_buf[15000];
    mbedtls_memory_buffer_alloc_init( memory_buf, sizeof(memory_buf) );
 #endif
    

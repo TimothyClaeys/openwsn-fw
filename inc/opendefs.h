@@ -39,7 +39,7 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define MAXNUMNEIGHBORS  1
 
 // maximum celllist length
-#define CELLLIST_MAX_LEN 5
+#define CELLLIST_MAX_LEN 15
 
 // big packet's size
 #define BIG_PACKET_SIZE  1150 
@@ -116,7 +116,7 @@ enum {
    STATUS_NEIGHBORS                    =  9,
    STATUS_KAPERIOD                     = 10,
    STATUS_JOINED                       = 11,
-   STATUS_MAX                          = 50,
+   STATUS_MAX                          = 101,
 };
 
 //component identifiers
@@ -222,65 +222,67 @@ enum {
    ERR_NO_SENT_PACKET                  = 0x15, // there is no sent packet in queue
    ERR_NO_RECEIVED_PACKET              = 0x16, // there is no received packet in queue
    ERR_SCHEDULE_OVERFLOWN              = 0x17, // schedule overflown
+   ERR_FAILED_SIXTOP_REQ               = 0x18, // [RED]failed to send a sixtop request[END]
+   ERR_CELL_ADDITION                   = 0x19, // [GREEN]Add cell (slotoffset: {0} -- channeloffset: {1})[END]
    // l2a
-   ERR_WRONG_CELLTYPE                  = 0x18, // wrong celltype {0} at slotOffset {1}
-   ERR_IEEE154_UNSUPPORTED             = 0x19, // unsupported IEEE802.15.4 parameter {1} at location {0}
-   ERR_DESYNCHRONIZED                  = 0x1a, // [BOLD][RED]got desynchronized at slotOffset {0}[END]
-   ERR_SYNCHRONIZED                    = 0x1b, // [BG-GREEN][BOLD][WHITE]synchronized at slotOffset {0}[END]
-   ERR_LARGE_TIMECORRECTION            = 0x1c, // large timeCorr.: {0} ticks (code loc. {1})
-   ERR_WRONG_STATE_IN_ENDFRAME_SYNC    = 0x1d, // wrong state {0} in end of frame+sync
-   ERR_WRONG_STATE_IN_STARTSLOT        = 0x1e, // wrong state {0} in startSlot, at slotOffset {1}
-   ERR_WRONG_STATE_IN_TIMERFIRES       = 0x1f, // wrong state {0} in timer fires, at slotOffset {1}
-   ERR_WRONG_STATE_IN_NEWSLOT          = 0x20, // wrong state {0} in start of frame, at slotOffset {1}
-   ERR_WRONG_STATE_IN_ENDOFFRAME       = 0x21, // wrong state {0} in end of frame, at slotOffset {1}
-   ERR_MAXTXDATAPREPARE_OVERFLOW       = 0x22, // maxTxDataPrepare overflows while at state {0} in slotOffset {1}
-   ERR_MAXRXACKPREPARE_OVERFLOWS       = 0x23, // maxRxAckPrepapare overflows while at state {0} in slotOffset {1}
-   ERR_MAXRXDATAPREPARE_OVERFLOWS      = 0x24, // maxRxDataPrepapre overflows while at state {0} in slotOffset {1}
-   ERR_MAXTXACKPREPARE_OVERFLOWS       = 0x25, // maxTxAckPrepapre overflows while at state {0} in slotOffset {1}
-   ERR_WDDATADURATION_OVERFLOWS        = 0x26, // wdDataDuration overflows while at state {0} in slotOffset {1}
-   ERR_WDRADIO_OVERFLOWS               = 0x27, // wdRadio overflows while at state {0} in slotOffset {1}
-   ERR_WDRADIOTX_OVERFLOWS             = 0x28, // wdRadioTx overflows while at state {0} in slotOffset {1}
-   ERR_WDACKDURATION_OVERFLOWS         = 0x29, // wdAckDuration overflows while at state {0} in slotOffset {1}
+   ERR_WRONG_CELLTYPE                  = 0x1a, // wrong celltype {0} at slotOffset {1}
+   ERR_IEEE154_UNSUPPORTED             = 0x1b, // unsupported IEEE802.15.4 parameter {1} at location {0}
+   ERR_DESYNCHRONIZED                  = 0x1c, // [BOLD][RED]got desynchronized at slotOffset {0}[END]
+   ERR_SYNCHRONIZED                    = 0x1d, // [BG-GREEN][BOLD][WHITE]synchronized at slotOffset {0}[END]
+   ERR_LARGE_TIMECORRECTION            = 0x1e, // large timeCorr.: {0} ticks (code loc. {1})
+   ERR_WRONG_STATE_IN_ENDFRAME_SYNC    = 0x1f, // wrong state {0} in end of frame+sync
+   ERR_WRONG_STATE_IN_STARTSLOT        = 0x20, // wrong state {0} in startSlot, at slotOffset {1}
+   ERR_WRONG_STATE_IN_TIMERFIRES       = 0x21, // wrong state {0} in timer fires, at slotOffset {1}
+   ERR_WRONG_STATE_IN_NEWSLOT          = 0x22, // wrong state {0} in start of frame, at slotOffset {1}
+   ERR_WRONG_STATE_IN_ENDOFFRAME       = 0x23, // wrong state {0} in end of frame, at slotOffset {1}
+   ERR_MAXTXDATAPREPARE_OVERFLOW       = 0x24, // maxTxDataPrepare overflows while at state {0} in slotOffset {1}
+   ERR_MAXRXACKPREPARE_OVERFLOWS       = 0x25, // maxRxAckPrepapare overflows while at state {0} in slotOffset {1}
+   ERR_MAXRXDATAPREPARE_OVERFLOWS      = 0x26, // maxRxDataPrepapre overflows while at state {0} in slotOffset {1}
+   ERR_MAXTXACKPREPARE_OVERFLOWS       = 0x27, // maxTxAckPrepapre overflows while at state {0} in slotOffset {1}
+   ERR_WDDATADURATION_OVERFLOWS        = 0x28, // wdDataDuration overflows while at state {0} in slotOffset {1}
+   ERR_WDRADIO_OVERFLOWS               = 0x29, // wdRadio overflows while at state {0} in slotOffset {1}
+   ERR_WDRADIOTX_OVERFLOWS             = 0x2a, // wdRadioTx overflows while at state {0} in slotOffset {1}
+   ERR_WDACKDURATION_OVERFLOWS         = 0x2b, // wdAckDuration overflows while at state {0} in slotOffset {1}
    // general
-   ERR_BUSY_SENDING                    = 0x2a, // busy sending
-   ERR_UNEXPECTED_SENDDONE             = 0x2b, // sendDone for packet I didn't send
-   ERR_NO_FREE_PACKET_BUFFER           = 0x2c, // no free packet buffer (code location {0})
-   ERR_FREEING_UNUSED                  = 0x2d, // freeing unused memory
-   ERR_FREEING_ERROR                   = 0x2e, // freeing memory unsupported memory
-   ERR_UNSUPPORTED_COMMAND             = 0x2f, // unsupported command {0}
-   ERR_MSG_UNKNOWN_TYPE                = 0x30, // unknown message type {0}
-   ERR_WRONG_ADDR_TYPE                 = 0x31, // wrong address type {0} (code location {1})
-   ERR_BRIDGE_MISMATCH                 = 0x32, // bridge mismatch (code location {0})
-   ERR_HEADER_TOO_LONG                 = 0x33, // header too long, length {1} (code location {0})
-   ERR_INPUTBUFFER_LENGTH              = 0x34, // input length problem, length={0}
-   ERR_BOOTED                          = 0x35, // booted
-   ERR_INVALIDSERIALFRAME              = 0x36, // invalid serial frame
-   ERR_INVALIDPACKETFROMRADIO          = 0x37, // invalid packet frome radio, length {1} (code location {0})
-   ERR_BUSY_RECEIVING                  = 0x38, // busy receiving when stop of serial activity, buffer input length {1} (code location {0})
-   ERR_WRONG_CRC_INPUT                 = 0x39, // wrong CRC in input Buffer (input length {0})
-   ERR_PACKET_SYNC                     = 0x3a, // synchronized when received a packet
-   ERR_SECURITY                        = 0x3b, // security error on frameType {0}, code location {1}
-   ERR_SIXTOP_RETURNCODE               = 0x3c, // sixtop return code {0} at sixtop state {1}
-   ERR_SIXTOP_COUNT                    = 0x3d, // there are {0} cells to request mote
-   ERR_SIXTOP_LIST                     = 0x3e, // the cells reserved to request mote contains slot {0} and slot {1}
-   ERR_SCHEDULE_ADDDUPLICATESLOT       = 0x3f, // the slot {0} to be added is already in schedule
-   ERR_UNSUPPORTED_FORMAT              = 0x40, // the received packet format is not supported {code location {0}}
-   ERR_UNSUPPORTED_METADATA            = 0x41, // the metadata type is not suppored
+   ERR_BUSY_SENDING                    = 0x2c, // busy sending
+   ERR_UNEXPECTED_SENDDONE             = 0x2d, // sendDone for packet I didn't send
+   ERR_NO_FREE_PACKET_BUFFER           = 0x2e, // no free packet buffer (code location {0})
+   ERR_FREEING_UNUSED                  = 0x2f, // freeing unused memory
+   ERR_FREEING_ERROR                   = 0x30, // freeing memory unsupported memory
+   ERR_UNSUPPORTED_COMMAND             = 0x31, // unsupported command {0}
+   ERR_MSG_UNKNOWN_TYPE                = 0x32, // unknown message type {0}
+   ERR_WRONG_ADDR_TYPE                 = 0x33, // wrong address type {0} (code location {1})
+   ERR_BRIDGE_MISMATCH                 = 0x34, // bridge mismatch (code location {0})
+   ERR_HEADER_TOO_LONG                 = 0x35, // header too long, length {1} (code location {0})
+   ERR_INPUTBUFFER_LENGTH              = 0x36, // input length problem, length={0}
+   ERR_BOOTED                          = 0x37, // booted
+   ERR_INVALIDSERIALFRAME              = 0x38, // invalid serial frame
+   ERR_INVALIDPACKETFROMRADIO          = 0x39, // invalid packet frome radio, length {1} (code location {0})
+   ERR_BUSY_RECEIVING                  = 0x3a, // busy receiving when stop of serial activity, buffer input length {1} (code location {0})
+   ERR_WRONG_CRC_INPUT                 = 0x3b, // wrong CRC in input Buffer (input length {0})
+   ERR_PACKET_SYNC                     = 0x3c, // synchronized when received a packet
+   ERR_SECURITY                        = 0x3d, // security error on frameType {0}, code location {1}
+   ERR_SIXTOP_RETURNCODE               = 0x3e, // sixtop return code {0} at sixtop state {1}
+   ERR_SIXTOP_COUNT                    = 0x3f, // there are {0} cells to request mote
+   ERR_SIXTOP_LIST                     = 0x40, // the cells reserved to request mote contains slot {0} and slot {1}
+   ERR_SCHEDULE_ADDDUPLICATESLOT       = 0x41, // the slot {0} to be added is already in schedule
+   ERR_UNSUPPORTED_FORMAT              = 0x42, // the received packet format is not supported {code location {0}}
+   ERR_UNSUPPORTED_METADATA            = 0x43, // the metadata type is not suppored
    //l3
-   ERR_6LORH_DEADLINE_EXPIRED	         = 0x42, // the received packet has expired
-   ERR_6LORH_DEADLINE_DROPPED          = 0x43, // packet expiry time reached, dropped
+   ERR_6LORH_DEADLINE_EXPIRED	       = 0x44, // the received packet has expired
+   ERR_6LORH_DEADLINE_DROPPED          = 0x45, // packet expiry time reached, dropped
    // join and OSCOAP
-   ERR_JOINED                          = 0x44, // node joined
-   ERR_SEQUENCE_NUMBER_OVERFLOW        = 0x45, // OSCOAP sequence number reached maximum value
-   ERR_BUFFER_OVERFLOW                 = 0x46, // OSCOAP buffer overflow detected {code location {0}}
-   ERR_REPLAY_FAILED                   = 0x47, // OSCOAP replay protection failed
-   ERR_DECRYPTION_FAILED               = 0x48, // OSCOAP decryption and tag verification failed
-   ERR_ABORT_JOIN_PROCESS              = 0x49, // aborted join process {code location {0}}
+   ERR_JOINED                          = 0x46, // node joined
+   ERR_SEQUENCE_NUMBER_OVERFLOW        = 0x47, // OSCOAP sequence number reached maximum value
+   ERR_BUFFER_OVERFLOW                 = 0x48, // OSCOAP buffer overflow detected {code location {0}}
+   ERR_REPLAY_FAILED                   = 0x49, // OSCOAP replay protection failed
+   ERR_DECRYPTION_FAILED               = 0x4a, // OSCOAP decryption and tag verification failed
+   ERR_ABORT_JOIN_PROCESS              = 0x4b, // aborted join process {code location {0}}
    // apps
    ERR_SENDING_ECHO_REQ                = 0x50, // Sending an udp or tcp echo request @ ASN: {0}
    ERR_RECEIVED_ECHO_REQ               = 0x51, // Sending an udp or tcp echo request
    ERR_RECV                            = 0x52, // [CYAN]Received packet @ asn: {0}, role: {1}[END]
-   ERR_SEND                            = 0x53, // [CYAN]Sending packet @ asn: {0}, role: {1}[END]
+   ERR_SEND                            = 0x53, // [CYAN]Sending packet @ slotoffset: {0}, role: {1}[END]
    ERR_DEBUG                           = 0x54, // Log message {0} -- {1}
    ERR_TCP_TIMER_RESET                 = 0x55, // Timeout on TCP connection
    ERR_TCP_CONNECTING                  = 0x56, // initiating TCP connection on port {0}
@@ -337,8 +339,9 @@ enum {
    ERR_DTLS_DATAGRAM_BUFFERED		   = 0x89, // a dtls datagram was buffered
    ERR_DTLS_BUFFER_FULL				   = 0x90, // [RED]dtls buffer for out-of-order messages is full: buffered: {0} capacity: {1}[END]
    ERR_LOAD_BUFFERED_DTLS_MSG		   = 0x91, // load a buffered message
-   ERR_MBEDTLS_HEAP_USAGE			   = 0x92, // allocating heap memory, currently used: {0} -- max used: {1}
-   ERR_OPENTLS_RESET	               = 0x93, // [RED]resetting TLS state machine in state {0}[END]
+   ERR_MBEDTLS_HEAP_ALLOC			   = 0x92, // allocating heap memory, start: {0} -- stop: {1}
+   ERR_MBEDTLS_HEAP_FREE			   = 0x93, // freeing heap memory, start: {0} -- stop: {1}
+   ERR_OPENTLS_RESET	               = 0x94, // [RED]resetting TLS state machine in state {0}[END]
 };
 
 //=========================== typedef =========================================
