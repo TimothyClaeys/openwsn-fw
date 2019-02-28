@@ -17,6 +17,7 @@
 enum {
    TCP_INITIAL_SEQNUM             = 100,
    TCP_TIMEOUT                    = 20000, //in ms
+   TCP_RETRANSMIT_TIMEOUT		  = 4000,
 };
 
 enum TCP_STATE_enums {
@@ -46,7 +47,7 @@ enum TCP_STATE_enums {
 
 enum TCP_DEFAULTS_enum{
    TCP_DEFAULT_DATA_OFFSET        =   0x50,
-   TCP_DEFAULT_WINDOW_SIZE        =    300,
+   TCP_DEFAULT_WINDOW_SIZE        =    700,
    TCP_DEFAULT_URGENT_POINTER     = 0x0000,
 };
 
@@ -129,17 +130,16 @@ struct tcp_resource_desc_t {
 typedef struct {
    uint8_t              state;
    uint16_t             myPort;
-   uint32_t             hisSeqNum;
+   uint16_t             hisPort;
    uint32_t             mySeqNum;
+   uint32_t             hisSeqNum;
    uint32_t             myAckNum;
    uint32_t             hisAckNum;
-   uint16_t             hisPort;
    open_addr_t          hisIPv6Address;
    OpenQueueEntry_t*    dataToSend;
    OpenQueueEntry_t*    ackToSend;
    OpenQueueEntry_t*    dataReceived;
    bool                 timerStarted;
-   bool                 retransmission;
    opentimers_id_t      timerId;
    opentimers_id_t      ackTimerId;
    tcp_resource_desc_t* resources;

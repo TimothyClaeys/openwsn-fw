@@ -60,10 +60,11 @@ owerror_t opentcp_connect(open_addr_t* dest, uint16_t param_tcp_hisPort, uint16_
       return E_FAIL;
    } 
   
-   //Register parameters of the host to which we want 
+   //Register parameters of the host to which we want
    tcp_vars.myPort  = param_tcp_myPort;
    tcp_vars.hisPort = param_tcp_hisPort;
    memcpy(&tcp_vars.hisIPv6Address,dest,sizeof(open_addr_t));
+   
    
    //I receive command 'connect', I send SYNC
    tempPkt = openqueue_getFreePacketBuffer(COMPONENT_OPENTCP);
@@ -169,7 +170,7 @@ owerror_t opentcp_send(const unsigned char* message, uint16_t size, uint8_t app)
 
    opentimers_scheduleAbsolute(
       tcp_vars.ackTimerId,
-      2000,
+      TCP_RETRANSMIT_TIMEOUT,
       opentimers_getValue(),
       TIME_MS,
       opentcp_timer_cb
@@ -181,6 +182,7 @@ owerror_t opentcp_send(const unsigned char* message, uint16_t size, uint8_t app)
       return E_FAIL;
    }
    else{
+	  openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_SEND, (errorparameter_t)0, (errorparameter_t)0);
       return E_SUCCESS;
    }
 }
@@ -205,7 +207,7 @@ void opentcp_sendDone(OpenQueueEntry_t* segment, owerror_t error) {
          break;
 
       case TCP_STATE_ALMOST_ESTABLISHED:                          //[sendDone] establishement: just tried to send a tcp ack 
-         openqueue_freePacketBuffer(segment);                         //after having received a tcp synack 
+         openqueue_freePacketBuffer(segment);                     //after having received a tcp synack 
          resource = tcp_vars.resources;
          
          while(NULL != resource){
@@ -231,11 +233,11 @@ void opentcp_sendDone(OpenQueueEntry_t* segment, owerror_t error) {
          }
          break;
 
-      case TCP_STATE_ALMOST_DATA_SENT:                            //[sendDone] data
+      case TCP_STATE_ALMOST_DATA_SENT:                            //[sendDone] data is on its way, go wait for ACK
          tcp_change_state(TCP_STATE_DATA_SENT);
          break;
 
-      case TCP_STATE_ALMOST_DATA_RECEIVED:                        //[sendDone] data
+      case TCP_STATE_ALMOST_DATA_RECEIVED:                        //[sendDone] got some data and send and just send an ACK
          resource = tcp_vars.resources;
 
          while(NULL != resource){
@@ -336,6 +338,7 @@ void opentcp_receive(OpenQueueEntry_t* segment) {
    tcp_resource_desc_t* resource;
    tcp_callbackSendDone_cbt tcp_send_done_callback_ptr = NULL;
    tcp_callbackWakeUpApp_cbt tcp_wakeupapp_callback_ptr = NULL;
+   tcp_callbackConnection_cbt tcp_connection_callback_ptr = NULL;
   
    // If not first time talking, must recognize the address 
    if (
@@ -413,6 +416,7 @@ void opentcp_receive(OpenQueueEntry_t* segment) {
                   TCP_RST_NO,
                   TCP_SYN_YES,
                   TCP_FIN_NO);
+
             tcp_change_state(TCP_STATE_ALMOST_SYN_RECEIVED);
 
             forwarding_send(tempPkt);
@@ -510,11 +514,34 @@ void opentcp_receive(OpenQueueEntry_t* segment) {
          break;
 
       case TCP_STATE_SYN_RECEIVED:                                //[receive] establishement
-         if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
+         resource = tcp_vars.resources;
+         
+		 if (containsControlBits(segment,TCP_ACK_YES,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) {
             
+         	while(NULL != resource){
+         	   if (resource->port == tcp_vars.myPort){
+         	      //an application has been registered for this port
+         	      tcp_connection_callback_ptr = (resource->callbackConnection == NULL) ? opentcp_connection_default_handler 
+         	                                                                           : resource->callbackConnection;
+         	      break;
+         	   }
+         	   resource = resource->next;
+         	}
+            if (tcp_connection_callback_ptr == NULL) {
+               openserial_printError(COMPONENT_OPENTCP,ERR_UNSUPPORTED_PORT_NUMBER,
+                                    (errorparameter_t)tcp_vars.myPort,
+                                    (errorparameter_t)0);
+               opentcp_reset();
+            }
+            else{
+               tcp_connection_callback_ptr();
+               tcp_change_state(TCP_STATE_ESTABLISHED);
+               openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CONN_ESTABLISHED, (errorparameter_t)tcp_vars.hisPort, 0);
+            }
             //I receive ACK, the virtual circuit is established
             tcp_change_state(TCP_STATE_ESTABLISHED);
-         } else {
+         
+		 } else {
             opentcp_reset();
             openserial_printError(COMPONENT_OPENTCP,ERR_TCP_RESET,
                                   (errorparameter_t)tcp_vars.state,
@@ -558,7 +585,7 @@ void opentcp_receive(OpenQueueEntry_t* segment) {
          } 
          else if (containsControlBits(segment,TCP_ACK_WHATEVER,TCP_RST_NO,TCP_SYN_NO,TCP_FIN_NO)) 
          {
-            //I receive data, I send ACK
+            //I just received some data, I need to send an ACK, I will not pass on data until ACK has been sent
             tcp_vars.hisSeqNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->sequence_number)));
             tcp_vars.hisAckNum = (packetfunctions_ntohl((uint8_t*)&(((tcp_ht*)segment->payload)->ack_number)));
 
@@ -660,6 +687,7 @@ void opentcp_receive(OpenQueueEntry_t* segment) {
             else{
                tcp_send_done_callback_ptr(tcp_vars.dataToSend, E_SUCCESS); 
                // remove the packet that was sent
+	  		   openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_ACK, (errorparameter_t)0, (errorparameter_t)0);
                openqueue_freePacketBuffer(tcp_vars.dataToSend);
                tcp_vars.dataToSend = NULL;
    
@@ -929,7 +957,12 @@ void timers_tcp_fired(void) {
    
    tcp_timeout_callback_ptr(); 
 
-   opentcp_reset();
+   if ( tcp_vars.state == TCP_STATE_ESTABLISHED ) {
+      opentcp_close();
+   }
+   else{
+   	  opentcp_reset();
+   }
 }
 
 void timers_tcp_retry_fired(void) {
@@ -944,7 +977,7 @@ void retransmissionTCPSegment(){
  
       opentimers_scheduleAbsolute(
          tcp_vars.ackTimerId,
-         2000,
+         TCP_RETRANSMIT_TIMEOUT,
          opentimers_getValue(),
          TIME_MS,
          opentcp_timer_cb
@@ -1043,7 +1076,7 @@ void opentcp_reset() {
 }
 
 void tcp_change_state(uint8_t new_tcp_state) {
-   openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CHANGING_STATE, tcp_vars.state, new_tcp_state);
+   // openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CHANGING_STATE, tcp_vars.state, new_tcp_state);
    tcp_vars.state = new_tcp_state;
   
    if (tcp_vars.state==TCP_STATE_CLOSED) {
