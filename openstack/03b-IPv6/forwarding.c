@@ -85,20 +85,21 @@ owerror_t forwarding_send(OpenQueueEntry_t* msg) {
     open_addr_t*         p_src;
     open_addr_t          temp_src_prefix;
     open_addr_t          temp_src_mac64b;
-    bool                 sac;
-    uint8_t              sam;
-    uint8_t              m;
-    bool                 dac;
-    uint8_t              dam;
-    uint8_t              next_header;
+    bool                 sac;					// source address compression
+    uint8_t              sam;					// source address mode
+    uint8_t              m;						// multicast compression
+    bool                 dac;					// destination address compression
+    uint8_t              dam;					// destination address mode
+    uint8_t              next_header;			// full or compressed next header
 
     // take ownership over the packet
-    msg->owner                = COMPONENT_FORWARDING;
+    msg->owner = COMPONENT_FORWARDING;
 
-    m   = IPHC_M_NO;
+	// no multicast compression
+    m = IPHC_M_NO;
 
     // retrieve my prefix and EUI64
-    myadd64                   = idmanager_getMyID(ADDR_64B);
+    myadd64 = idmanager_getMyID(ADDR_64B);
 
     // set source address (me)
     msg->l3_sourceAdd.type=ADDR_128B;
@@ -184,23 +185,24 @@ owerror_t forwarding_send(OpenQueueEntry_t* msg) {
     //IPHC inner header and NHC IPv6 header will be added at here
 
     if (msg->l4_protocol_compressed){
-        next_header = IPHC_NH_COMPRESSED;
+        next_header = IPHC_NH_COMPRESSED;		// next header field is compressed
     }else{
-        next_header = IPHC_NH_INLINE;
+        next_header = IPHC_NH_INLINE;			// full 8 bits are carried inline
     }
+
     iphc_prependIPv6Header(msg,
-                IPHC_TF_ELIDED,
-                flow_label, // value_flowlabel
-                next_header,
-                msg->l4_protocol, // value nh. If compressed this is ignored as LOWPAN_NH is already there.
-                IPHC_HLIM_64,
-                ipv6_outer_header.hop_limit,
-                IPHC_CID_NO,
-                sac,
-                sam,
-                m,
-                dac,
-                dam,
+                IPHC_TF_ELIDED,						// TF is elided
+                flow_label, 						// value_flowlabel
+                next_header,						// set above
+                msg->l4_protocol, 					// value nh. If compressed this is ignored as LOWPAN_NH is already there.
+                IPHC_HLIM_64,						// IPv6 Hop Limit Compresssion
+                ipv6_outer_header.hop_limit,		
+                IPHC_CID_NO,						// No context extension
+                sac,								// source address compression
+                sam,								// source address mode
+                m,									// no multicast compression
+                dac,								// dest address compression
+                dam,								// dest address mode
                 p_dest,
                 p_src,
                 PCKTSEND

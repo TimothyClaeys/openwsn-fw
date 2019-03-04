@@ -798,7 +798,7 @@ uint8_t iphc_retrieveIphcHeader(open_addr_t* temp_addr_16b,
     uint8_t lowpan_nhc;
 
     temp_8b = *((uint8_t*)(msg->payload)+ipv6_header->header_length+previousLen);
-    
+
     if ((temp_8b&PAGE_DISPATCH_TAG) == PAGE_DISPATCH_TAG){
         page = temp_8b&PAGE_DISPATCH_NUM; 
         ipv6_header->header_length += sizeof(uint8_t);
@@ -1013,6 +1013,9 @@ uint8_t iphc_retrieveIphcHeader(open_addr_t* temp_addr_16b,
           lowpan_nhc = *(msg->payload+ipv6_header->header_length+previousLen);//get the next element after addresses
           if ((lowpan_nhc & NHC_UDP_MASK) == NHC_UDP_ID){ //check if it is UDP LOWPAN_NHC
              ipv6_header->next_header = IANA_UDP;
+          }
+          else if ((lowpan_nhc & NHC_TCP_MASK) == NHC_TCP_ID){ //check if it is UDP LOWPAN_NHC
+             ipv6_header->next_header = IANA_TCP;
           }
           else{
               //error?

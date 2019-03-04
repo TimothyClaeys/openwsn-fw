@@ -91,6 +91,25 @@ enum TCP_FLAG_POSITIONS_enum {
 
 //=========================== typedef =========================================
 
+#ifdef LOWPAN_TCPHC
+
+BEGIN_PACK
+typedef struct _tcphc{
+	uint16_t cid;
+	uint16_t cid_m;
+	uint16_t seq_m;
+	uint16_t ack_m;
+	uint8_t wnd_m;
+	uint8_t cwr;
+	uint8_t ece;
+	uint8_t f_flag;
+	uint8_t p_flag;
+	uint8_t t_opt;
+	uint8_t s_opt;
+} lowpan_tcphc_t;
+END_PACK
+
+#endif
 typedef struct {
    uint16_t source_port;
    uint16_t destination_port;
@@ -124,9 +143,6 @@ struct tcp_resource_desc_t {
    tcp_resource_desc_t*          next;
 };
 
-
-//=========================== module variables ================================
-
 typedef struct {
    uint8_t              state;
    uint16_t             myPort;
@@ -144,6 +160,7 @@ typedef struct {
    opentimers_id_t      ackTimerId;
    tcp_resource_desc_t* resources;
 } opentcp_vars_t;
+
 
 //=========================== prototypes ======================================
 

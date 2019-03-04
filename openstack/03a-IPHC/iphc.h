@@ -52,6 +52,8 @@ enum NHC_enums {
    // UDP Header Encoding            starts with b1111 0xxx
    NHC_UDP_MASK              = 0xf8,          // b1111 1000
    NHC_UDP_ID                = 0xf0,          // b1111 0000
+   NHC_TCP_MASK              = 0xe0,          // b1110 0000
+   NHC_TCP_ID				 = 0xc0,
    // EID Encoding
    NHC_EID_MASK              = 0x0e,
    NHC_EID_HOP_VAL           = 0x00,
@@ -77,6 +79,32 @@ enum NHC_UDP_PORTS_enums {
    NHC_UDP_PORTS_16S_8D      = 1,
    NHC_UDP_PORTS_8S_16D      = 2,
    NHC_UDP_PORTS_4S_4D       = 3,
+};
+
+enum NHC_TCP_SEQ_enums {
+   NHC_TCP_SEQ_ELIDED		= 0,
+   NHC_TCP_SEQ_8B			= 1,
+   NHC_TCP_SEQ_16B			= 2,
+   NHC_TCP_SEQ_32B			= 3,
+};
+
+enum NHC_TCP_ACK_enums {
+   NHC_TCP_ACK_ELIDED		= 0,
+   NHC_TCP_ACK_8B			= 1,
+   NHC_TCP_ACK_16B			= 2,
+   NHC_TCP_ACK_32B			= 3,
+};
+
+enum NHC_TCP_WND_enums {
+   NHC_TCP_WND_ELIDED		= 0,
+   NHC_TCP_WND_LSB			= 1,
+   NHC_TCP_WND_MSB			= 2,
+   NHC_TCP_WND_FULL			= 3,
+};
+
+enum NHC_TCP_CID_enums {
+   NHC_TCP_CID_8B			= 0,
+   NHC_TCP_CID_16B			= 1,
 };
 
 enum IPHC_HLIM_enums {
