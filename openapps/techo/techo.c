@@ -10,14 +10,20 @@
 
 techo_vars_t techo_vars;
 
-static const char* big_payload = "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.";
+static const char* big_payload = "Sed ut perspiciatis";
+
+static const uint8_t techo_dst_addr[] = {
+	 0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
+};
 
 // local gateway
+/*
 static const uint8_t techo_dst_addr[] = {
 	 0x20, 0x01, 0x06, 0x60, 0x53, 0x01, 0x00, 0x24,
 	 0x10, 0xa8, 0x5b, 0x24, 0x0a, 0xeb, 0x89, 0x03
 };
-
+*/
 // milo
 /*
 static const uint8_t techo_dst_addr[] = {
@@ -25,9 +31,6 @@ static const uint8_t techo_dst_addr[] = {
 	 0x00, 0x00, 0x00, 0x00, 0x00, 0x47, 0x00, 0x05
 };
 */
-
-uint16_t successful_echo = 0;
-uint16_t bad_echo = 0;
 
 //=========================== prototypes ======================================
 
@@ -48,7 +51,7 @@ void techo_init() {
 	// clear local variables
 	memset(&techo_vars,0,sizeof(techo_vars_t));
  
-	// register at UDP stack
+	// register at TCP stack
 	techo_vars.desc.port				= openrandom_get16b();
 	techo_vars.desc.callbackReceive		= &techo_receive;
 	techo_vars.desc.callbackSendDone	= &techo_sendDone;
@@ -103,10 +106,10 @@ void techo_send_data_cb(void) {
   }
 	
   if( opentcp_send(big_payload, strlen(big_payload), COMPONENT_TECHO) != E_SUCCESS ){
-		openserial_printInfo( COMPONENT_TECHO, ERR_SEND_FAILED, (errorparameter_t)0, (errorparameter_t)0 );
+		openserial_printInfo( COMPONENT_TECHO, ERR_ECHO_FAIL, (errorparameter_t)0, (errorparameter_t)0 );
   }
   else {
-		openserial_printInfo( COMPONENT_TECHO, ERR_SENDING_ECHO, (errorparameter_t)0, (errorparameter_t)0 );
+		openserial_printInfo( COMPONENT_TECHO, ERR_SENDING_ECHO_REQ, (errorparameter_t)0, (errorparameter_t)0 );
   }
   
 }
@@ -158,18 +161,15 @@ void techo_receive(OpenQueueEntry_t* msg) {
 	techo_vars.echoed = TRUE; 
 	
 	if ( memcmp(msg->payload, big_payload, msg->length) == 0){
-		successful_echo++;
-		openserial_printInfo( COMPONENT_TECHO, ERR_RECV_GOOD_ECHO, (errorparameter_t)successful_echo, (errorparameter_t)0 );
+		openserial_printInfo( COMPONENT_TECHO, ERR_RECEIVED_ECHO, (errorparameter_t)0, (errorparameter_t)0 );
 	}
 	else{
-		bad_echo++;
-		openserial_printInfo( COMPONENT_TECHO, ERR_RECV_BAD_ECHO, (errorparameter_t)bad_echo, (errorparameter_t)0 );
+		openserial_printInfo( COMPONENT_TECHO, ERR_ECHO_FAIL, (errorparameter_t)1, (errorparameter_t)0 );
 	}
 }
 
 void techo_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
 	// packet is freed up by the TCP layer when, the ACK is received
-	// openserial_printInfo( COMPONENT_TECHO, ERR_TECHO_SENT_SUCCESS, 0, 0);
 }
 
 void techo_changeState(uint8_t state){
