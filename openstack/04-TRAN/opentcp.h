@@ -95,10 +95,10 @@ enum TCP_FLAG_POSITIONS_enum {
 
 BEGIN_PACK
 typedef struct _tcphc{
-	uint16_t cid;
-	uint16_t cid_m;
-	uint16_t seq_m;
-	uint16_t ack_m;
+	uint8_t cid;
+	uint8_t cid_m;
+	uint8_t seq_m;
+	uint8_t ack_m;
 	uint8_t wnd_m;
 	uint8_t cwr;
 	uint8_t ece;
