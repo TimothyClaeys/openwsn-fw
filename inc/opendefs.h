@@ -185,6 +185,7 @@ enum {
    COMPONENT_MBEDTLS                   = 0x2d,
    COMPONENT_FRAG                      = 0x2e,
    COMPONENT_OPENDTLS				   = 0x2f,
+   COMPONENT_TECHO_SRV				   = 0x31,
 };
 
 /**
@@ -279,41 +280,41 @@ enum {
    ERR_DECRYPTION_FAILED               = 0x4a, // OSCOAP decryption and tag verification failed
    ERR_ABORT_JOIN_PROCESS              = 0x4b, // aborted join process {code location {0}}
    // apps
-   ERR_SENDING_ECHO_REQ                = 0x50, // Sending an udp or tcp echo request @ ASN: {0}
-   ERR_RECEIVED_ECHO_REQ               = 0x51, // Sending an udp or tcp echo request
-   ERR_RECV                            = 0x52, // [CYAN]Received packet @ asn: {0}, role: {1}[END]
-   ERR_SEND                            = 0x53, // [CYAN]Sending packet @ slotoffset: {0}, role: {1}[END]
-   ERR_DEBUG                           = 0x54, // Log message {0} -- {1}
-   ERR_TCP_TIMER_RESET                 = 0x55, // Timeout on TCP connection
-   ERR_TCP_CONNECTING                  = 0x56, // initiating TCP connection on port {0}
-   ERR_TCP_CONN_ESTABLISHED            = 0x57, // [GREEN]TCP connection established, dest. port: {0}[END]
-   ERR_TLS_INIT_FAILED                 = 0x58, // failed to initialize OPENTLS
-   ERR_WRONG_TLS_STATE                 = 0x59, // [RED]wrong TLS state: {0}[END]
-   ERR_TLS_TRANSMISSION_FAILED         = 0x5a, // [RED]TLS fragment transmission failed[END]
-   ERR_TLS_RECV_BYTES                  = 0x5b, // [GREEN]bytes in receive buffer: {0} @ asn: {1}[END]
-   ERR_TCP_CHANGING_STATE              = 0x5c, // TCP state change: {0} --> {1}
-   ERR_REQUESTING_CLIENT_HELLO         = 0x5d, // [BLUE]request a client hello message, state: {0}, next state in: {1}[END]
-   ERR_SENDING_CLIENT_HELLO            = 0x5e, // [BLUE]sending client hello message, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_HELLO            = 0x5f, // [BLUE]parsing server hello message, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_CERT             = 0x60, // [BLUE]processing server certificate, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_KEX              = 0x61, // [BLUE]processing server key exchange message, state: {0}, next state in: {1}[END]
-   ERR_CERTIFICATE_REQUEST             = 0x62, // [BLUE]process possible certificate request server, state: {0}, next state in: {1}[END]
-   ERR_TLS_HANDSHAKE_FAILED            = 0x63, // [RED]TLS handshake failed with error code {0} in state {1}[END]
-   ERR_TLS_TRUSTED_CERT                = 0x64, // [MAGENTA]skip trusted certificate[END]
-   ERR_TLS_STATE_DONE                  = 0x65, // [BG-GREEN][BOLD][WHITE]DONE![END]
-   ERR_PARSING_SERVER_HELLO_DONE       = 0x66, // [BLUE]processing server hello done, state: {0}, next state in: {1}[END]
-   ERR_PREP_CLIENT_CERT                = 0x67, // [BLUE]preparing possible client cert, state: {0}, next state in: {1}[END]
-   ERR_SENDING_CLIENT_KEX              = 0x68, // [BLUE]sending client key exchange, state: {0}, next state in: {1}[END]
-   ERR_MBEDTLS_ERROR                   = 0x69, // [RED]MBEDTLS failed with error codes: {0} - {1}[END]
-   ERR_TCP_RETRANSMISSION              = 0x6a, // retransmission attempt
-   ERR_UPDATE_READ_BUFFER              = 0x6b, // updating receive buffer, read: {0}, left: {1}
-   ERR_CERT_VERIFY                     = 0x6c, // [BLUE]possibly verify certificate, state: {0}, next state in: {1}[END]
-   ERR_CLIENT_CHANGE_CIPHER_SPEC       = 0x6d, // [BLUE]client change cipher spec, state: {0}, next state in: {1}[END]
-   ERR_CLIENT_DONE                     = 0x6e, // [BLUE]client done, state: {0}, next state in: {1}[END]
-   ERR_SERVER_CHANGE_CIPHER_SPEC       = 0x6f, // [BLUE]server change cipher spec, state: {0}, next state in: {1}[END]
-   ERR_SERVER_DONE                     = 0x70, // [BLUE]server done, state: {0}, next state in: {1}[END]
-   ERR_FLUSH_BUFFERS                   = 0x71, // [BLUE]flushing buffers, state: {0}, next state in: {1}[END]
-   ERR_HANDSHAKE_WRAPUP                = 0x72, // [BLUE]wrapping up handshake, state: {0}, next state in: {1}[END]
+   ERR_SENDING_ECHO_REQ                = 0x50, // Sending an echo request
+   ERR_RECEIVED_ECHO       	           = 0x51, // Received echo
+   ERR_ECHO_FAIL					   = 0x52, // Echo app failed (loc.: {0})
+   ERR_RECV                            = 0x53, // [CYAN]Received packet @ asn: {0}, role: {1}[END]
+   ERR_SEND                            = 0x54, // [CYAN]Sending packet @ slotoffset: {0}, role: {1}[END]
+   ERR_DEBUG                           = 0x55, // Log message {0} -- {1}
+   ERR_TCP_TIMER_RESET                 = 0x56, // Timeout on TCP connection
+   ERR_TCP_CONNECTING                  = 0x57, // initiating TCP connection on port {0}
+   ERR_TCP_CONN_ESTABLISHED            = 0x58, // [GREEN]TCP connection established, dest. port: {0}[END]
+   ERR_TLS_INIT_FAILED                 = 0x59, // failed to initialize OPENTLS
+   ERR_WRONG_TLS_STATE                 = 0x5a, // [RED]wrong TLS state: {0}[END]
+   ERR_TLS_TRANSMISSION_FAILED         = 0x5b, // [RED]TLS fragment transmission failed[END]
+   ERR_TLS_RECV_BYTES                  = 0x5c, // [GREEN]bytes in receive buffer: {0} @ asn: {1}[END]
+   ERR_REQUESTING_CLIENT_HELLO         = 0x5d, // [BLUE]client hello request, state: {0}, next state in: {1}[END]
+   ERR_SENDING_CLIENT_HELLO            = 0x5e, // [BLUE]client hello message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_HELLO            = 0x5f, // [BLUE]server hello message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_CERT             = 0x60, // [BLUE]server certificate, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_KEX              = 0x61, // [BLUE]server key exchange message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_HELLO_DONE       = 0x62, // [BLUE]server hello done, state: {0}, next state in: {1}[END]
+   ERR_CERTIFICATE_REQUEST             = 0x63, // [BLUE]possible client certificate request, state: {0}, next state in: {1}[END]
+   ERR_PREP_CLIENT_CERT                = 0x64, // [BLUE]possible client cert, state: {0}, next state in: {1}[END]
+   ERR_SENDING_CLIENT_KEX              = 0x65, // [BLUE]client key exchange, state: {0}, next state in: {1}[END]
+   ERR_CLIENT_CHANGE_CIPHER_SPEC       = 0x66, // [BLUE]client change cipher spec, state: {0}, next state in: {1}[END]
+   ERR_SERVER_CHANGE_CIPHER_SPEC       = 0x67, // [BLUE]server change cipher spec, state: {0}, next state in: {1}[END]
+   ERR_SERVER_DONE                     = 0x68, // [BLUE]server done, state: {0}, next state in: {1}[END]
+   ERR_FLUSH_BUFFERS                   = 0x69, // [BLUE]flushing buffers, state: {0}, next state in: {1}[END]
+   ERR_CERT_VERIFY                     = 0x6a, // [BLUE]possibly verify certificate, state: {0}, next state in: {1}[END]
+   ERR_CLIENT_DONE                     = 0x6b, // [BLUE]client done, state: {0}, next state in: {1}[END]
+   ERR_HANDSHAKE_WRAPUP                = 0x6c, // [BLUE]wrapping up handshake, state: {0}, next state in: {1}[END]
+   ERR_TLS_HANDSHAKE_FAILED            = 0x6d, // [RED]TLS handshake failed with error code {0} in state {1}[END]
+   ERR_TLS_TRUSTED_CERT                = 0x6e, // [MAGENTA]skip trusted certificate[END]
+   ERR_TLS_STATE_DONE                  = 0x6f, // [BG-GREEN][BOLD][WHITE]DONE![END]
+   ERR_MBEDTLS_ERROR                   = 0x70, // [RED]MBEDTLS failed with error codes: {0} - {1}[END]
+   ERR_TCP_RETRANSMISSION              = 0x71, // retransmission attempt
+   ERR_UPDATE_READ_BUFFER              = 0x72, // updating receive buffer, read: {0}, left: {1}
    ERR_WAITING_FOR_DATA                = 0x73, // [YELLOW]waiting for handshake data[END]
    ERR_WAITING_FOR_TX                  = 0x74, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
    ERR_BUSY_IN_STATE                   = 0x75, // [YELLOW]still processing previous state: {0}[END]
@@ -328,7 +329,7 @@ enum {
    ERR_ALLOC_NUM_ENTRIES               = 0x7e, // [MAGENTA]Allocate openqueue entry, total entries {0}, creator {1} [END]
    ERR_FREE_NUM_ENTRIES                = 0x7f, // [MAGENTA]Free openqueue entry, total entries {0}, creator {1} [END]
    ERR_MISSING_FRAGS                   = 0x80, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
-   ERR_TECHO_SENT_SUCCESS              = 0x81, // techo data was successfully received by destination
+   ERR_TECHO_SUCCESS		           = 0x81, // [GREEN] Echo was succesfull [END]
    ERR_TCP_RETRANSMISSION_FAILED       = 0x82, // [RED]retransmission attempt failed[END]
    ERR_REASSEMBLE                      = 0x83, // reassemble 6lowpan fragments, size: {0}
    ERR_FAST_FORWARD                    = 0x84, // fast forward of 6lowpan packet
@@ -342,6 +343,8 @@ enum {
    ERR_MBEDTLS_HEAP_ALLOC			   = 0x92, // allocating heap memory, start: {0} -- stop: {1}
    ERR_MBEDTLS_HEAP_FREE			   = 0x93, // freeing heap memory, start: {0} -- stop: {1}
    ERR_OPENTLS_RESET	               = 0x94, // [RED]resetting TLS state machine in state {0}[END]
+   ERR_TCP_SEND						   = 0x95, // [GREEN] Sent TCP packet [END]
+   ERR_TCP_ACK						   = 0x96, // [GREEN] Received TCP ack [END] 
 };
 
 //=========================== typedef =========================================
@@ -362,13 +365,14 @@ END_PACK
 typedef asn_t  macFrameCounter_t;
 
 BEGIN_PACK
-
 typedef struct {
     bool      isUsed;
     uint16_t  slotoffset;
     uint16_t  channeloffset;
 } cellInfo_ht;
+END_PACK
 
+BEGIN_PACK
 typedef struct {                                 // always written big endian, i.e. MSB in addr[0]
    uint8_t type;
    union {
@@ -381,6 +385,7 @@ typedef struct {                                 // always written big endian, i
 } open_addr_t;
 END_PACK
 
+BEGIN_PACK
 typedef struct {
    //admin
    uint8_t       creator;                                       // the component which called getFreePacketBuffer()
@@ -443,7 +448,7 @@ typedef struct {
    //the packet
    uint8_t       packet[1+1+125+2+1];                           // 1B spi address, 1B length, 125B data, 2B CRC, 1B LQI
 } OpenQueueEntry_t;
-
+END_PACK
 
 typedef struct {
    OpenQueueEntry_t  standard_size_msg;
