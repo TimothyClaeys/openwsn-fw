@@ -23,8 +23,8 @@
 //=========================== variables =======================================
 
 ieee154e_vars_t    ieee154e_vars;
-ieee154e_stats_t   ieee154e_stats;
-ieee154e_dbg_t     ieee154e_dbg;
+//ieee154e_stats_t   ieee154e_stats;
+//ieee154e_dbg_t     ieee154e_dbg;
 
 //=========================== prototypes ======================================
 
@@ -88,14 +88,14 @@ void     changeIsSync(bool newIsSync);
 void     notif_sendDone(OpenQueueEntry_t* packetSent, owerror_t error);
 void     notif_receive(OpenQueueEntry_t* packetReceived);
 // statistics
-void     resetStats(void);
-void     updateStats(PORT_SIGNED_INT_WIDTH timeCorrection);
+//void     resetStats(void);
+//void     updateStats(PORT_SIGNED_INT_WIDTH timeCorrection);
 // misc
 uint8_t  calculateFrequency(uint8_t channelOffset);
 void     changeState(ieee154e_state_t newstate);
 void     endSlot(void);
-bool     debugPrint_asn(void);
-bool     debugPrint_isSync(void);
+//bool     debugPrint_asn(void);
+//bool     debugPrint_isSync(void);
 // interrupts
 void     isr_ieee154e_newSlot(opentimers_id_t id);
 void     isr_ieee154e_timer(opentimers_id_t id);
@@ -112,7 +112,7 @@ void ieee154e_init(void) {
    
     // initialize variables
     memset(&ieee154e_vars,0,sizeof(ieee154e_vars_t));
-    memset(&ieee154e_dbg,0,sizeof(ieee154e_dbg_t));
+    // memset(&ieee154e_dbg,0,sizeof(ieee154e_dbg_t));
     
     // set singleChannel to 0 to enable channel hopping.
     ieee154e_vars.singleChannel     = 14;
@@ -134,8 +134,8 @@ void ieee154e_init(void) {
         changeIsSync(FALSE);
     }
     
-    resetStats();
-    ieee154e_stats.numDeSync                 = 0;
+    //resetStats();
+    //ieee154e_stats.numDeSync                 = 0;
     
     // switch radio on
     radio_rfOn();
@@ -302,7 +302,7 @@ void isr_ieee154e_newSlot(opentimers_id_t id) {
 #endif
       activity_ti1ORri1();
    }
-   ieee154e_dbg.num_newSlot++;
+   // ieee154e_dbg.num_newSlot++;
 }
 
 /**
@@ -381,7 +381,7 @@ void isr_ieee154e_timer(opentimers_id_t id) {
          endSlot();
          break;
    }
-   ieee154e_dbg.num_timer++;
+   // ieee154e_dbg.num_timer++;
 }
 
 /**
@@ -430,7 +430,7 @@ void ieee154e_startOfFrame(PORT_TIMER_WIDTH capturedTime) {
             break;
       }
    }
-   ieee154e_dbg.num_startOfFrame++;
+   //ieee154e_dbg.num_startOfFrame++;
 }
 
 /**
@@ -466,7 +466,7 @@ void ieee154e_endOfFrame(PORT_TIMER_WIDTH capturedTime) {
             break;
       }
    }
-   ieee154e_dbg.num_endOfFrame++;
+   //ieee154e_dbg.num_endOfFrame++;
 }
 
 //======= misc
@@ -479,6 +479,7 @@ status information about several modules in the OpenWSN stack.
 
 \returns TRUE if this function printed something, FALSE otherwise.
 */
+/*
 bool debugPrint_asn(void) {
    asn_t output;
    output.byte4         =  ieee154e_vars.asn.byte4;
@@ -487,7 +488,7 @@ bool debugPrint_asn(void) {
    openserial_printStatus(STATUS_ASN,(uint8_t*)&output,sizeof(output));
    return TRUE;
 }
-
+*/
 /**
 \brief Trigger this module to print status information, over serial.
 
@@ -496,12 +497,14 @@ status information about several modules in the OpenWSN stack.
 
 \returns TRUE if this function printed something, FALSE otherwise.
 */
+/*
 bool debugPrint_isSync(void) {
    uint8_t output=0;
    output = ieee154e_vars.isSync;
    openserial_printStatus(STATUS_ISSYNC,(uint8_t*)&output,sizeof(uint8_t));
    return TRUE;
 }
+*/
 
 /**
 \brief Trigger this module to print status information, over serial.
@@ -511,12 +514,13 @@ status information about several modules in the OpenWSN stack.
 
 \returns TRUE if this function printed something, FALSE otherwise.
 */
+/*
 bool debugPrint_macStats(void) {
    // send current stats over serial
    openserial_printStatus(STATUS_MACSTATS,(uint8_t*)&ieee154e_stats,sizeof(ieee154e_stats_t));
    return TRUE;
 }
-
+*/
 //=========================== private =========================================
 
 //======= SYNCHRONIZING
@@ -555,8 +559,8 @@ port_INLINE void activity_synchronize_newSlot(void) {
         radio_rxNow();
     } else {
         // I'm listening last slot
-        ieee154e_stats.numTicsOn    += ieee154e_vars.slotDuration;
-        ieee154e_stats.numTicsTotal += ieee154e_vars.slotDuration;
+        //ieee154e_stats.numTicsOn    += ieee154e_vars.slotDuration;
+        //ieee154e_stats.numTicsTotal += ieee154e_vars.slotDuration;
         
 #ifdef SLOT_FSM_IMPLEMENTATION_MULTIPLE_TIMER_INTERRUPT
         sctimer_setCapture(ACTION_RX_SFD_DONE);
@@ -854,7 +858,7 @@ port_INLINE void activity_ti1ORri1(void) {
                                   (errorparameter_t)0);
             
             // update the statistics
-            ieee154e_stats.numDeSync++;
+            //ieee154e_stats.numDeSync++;
                
             // abort
             endSlot();
@@ -917,7 +921,14 @@ port_INLINE void activity_ti1ORri1(void) {
         // abort the slot
         endSlot();
         //start outputing serial
-        //openserial_startOutput();
+		/*
+		if ( ieee154e_vars.slotOffset % 2 == 0 ) {
+			openserial_startInput();
+		}
+		else{
+        	openserial_startOutput();
+		}
+		*/
         return;
     }
     
@@ -1182,6 +1193,7 @@ port_INLINE void activity_ti1ORri1(void) {
                                (errorparameter_t)ieee154e_vars.slotOffset);
             // abort
             endSlot();
+			
             break;
     }
 }
@@ -1264,7 +1276,9 @@ port_INLINE void activity_ti3(void) {
     radio_txNow();
 #endif
     //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_OPENTLS ){
-    openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, ieee154e_vars.localCopyForTransmission.creator);
+    if ( !idmanager_getIsDAGroot()) {
+		openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, ieee154e_vars.localCopyForTransmission.creator);
+	}
     //}
     //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_ICMPv6RPL && icmpv6rpl_busySendingDAO() == TRUE ){
     // openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, 0);
@@ -1827,9 +1841,11 @@ port_INLINE void activity_ri5(PORT_TIMER_WIDTH capturedTime) {
     ieee154e_vars.dataReceived->creator = COMPONENT_IEEE802154E;
     ieee154e_vars.dataReceived->owner   = COMPONENT_IEEE802154E;
 
-    //openserial_printInfo( COMPONENT_IEEE802154E, ERR_RECV, ieee154e_vars.asn.bytes0and1, scheduler_getTaskCount() );
-
-    /*
+	if ( idmanager_getIsDAGroot() ) {
+    	openserial_printInfo( COMPONENT_IEEE802154E, ERR_RECV, ieee154e_vars.asn.bytes0and1, 0 );
+	}
+    
+	/*
     The do-while loop that follows is a little parsing trick.
     Because it contains a while(0) condition, it gets executed only once.
     The behavior is:
@@ -2716,7 +2732,7 @@ void synchronizePacket(PORT_TIMER_WIDTH timeReceived) {
    
    // log a large timeCorrection
    if (
-         ieee154e_vars.isSync==TRUE
+         ieee154e_vars.isSync==TRUE && timeCorrection > 5
       ) {
       openserial_printError(COMPONENT_IEEE802154E,ERR_LARGE_TIMECORRECTION,
                             (errorparameter_t)timeCorrection,
@@ -2724,8 +2740,8 @@ void synchronizePacket(PORT_TIMER_WIDTH timeReceived) {
    }
    
    // update the stats
-   ieee154e_stats.numSyncPkt++;
-   updateStats(timeCorrection);
+   //ieee154e_stats.numSyncPkt++;
+   // updateStats(timeCorrection);
    
 #ifdef OPENSIM
    debugpins_syncPacket_set();
@@ -2760,7 +2776,7 @@ void synchronizeAck(PORT_SIGNED_INT_WIDTH timeCorrection) {
 #endif
    // log a large timeCorrection
    if (
-         ieee154e_vars.isSync==TRUE
+         ieee154e_vars.isSync==TRUE && timeCorrection > 5
       ) {
       openserial_printError(COMPONENT_IEEE802154E,ERR_LARGE_TIMECORRECTION,
                             (errorparameter_t)timeCorrection,
@@ -2768,8 +2784,8 @@ void synchronizeAck(PORT_SIGNED_INT_WIDTH timeCorrection) {
    }
 
    // update the stats
-   ieee154e_stats.numSyncAck++;
-   updateStats(timeCorrection);
+   //ieee154e_stats.numSyncAck++;
+   // updateStats(timeCorrection);
    
 #ifdef OPENSIM
    debugpins_syncAck_set();
@@ -2782,7 +2798,7 @@ void changeIsSync(bool newIsSync) {
    
    if (ieee154e_vars.isSync==TRUE) {
       leds_sync_on();
-      resetStats();
+      //resetStats();
    } else {
       leds_sync_off();
       schedule_resetBackoff();
@@ -2820,17 +2836,18 @@ void notif_receive(OpenQueueEntry_t* packetReceived) {
 }
 
 //======= stats
-
+/*
 port_INLINE void resetStats(void) {
-   ieee154e_stats.numSyncPkt      =    0;
-   ieee154e_stats.numSyncAck      =    0;
-   ieee154e_stats.minCorrection   =  127;
-   ieee154e_stats.maxCorrection   = -127;
-   ieee154e_stats.numTicsOn       =    0;
-   ieee154e_stats.numTicsTotal    =    0;
+   //ieee154e_stats.numSyncPkt      =    0;
+   //ieee154e_stats.numSyncAck      =    0;
+   //ieee154e_stats.minCorrection   =  127;
+   //ieee154e_stats.maxCorrection   = -127;
+   //ieee154e_stats.numTicsOn       =    0;
+   //ieee154e_stats.numTicsTotal    =    0;
    // do not reset the number of de-synchronizations
 }
-
+*/
+/*
 void updateStats(PORT_SIGNED_INT_WIDTH timeCorrection) {
    // update minCorrection
    if (timeCorrection<ieee154e_stats.minCorrection) {
@@ -2841,6 +2858,7 @@ void updateStats(PORT_SIGNED_INT_WIDTH timeCorrection) {
      ieee154e_stats.maxCorrection = timeCorrection;
    }
 }
+*/
 
 //======= misc
 
@@ -2958,13 +2976,15 @@ void endSlot(void) {
     ieee154e_vars.syncCapturedTime = 0;
     
     //computing duty cycle.
-    ieee154e_stats.numTicsOn+=ieee154e_vars.radioOnTics;//accumulate and tics the radio is on for that window
-    ieee154e_stats.numTicsTotal+=ieee154e_vars.slotDuration;//increment total tics by timer period.
+    //ieee154e_stats.numTicsOn+=ieee154e_vars.radioOnTics;//accumulate and tics the radio is on for that window
+    //ieee154e_stats.numTicsTotal+=ieee154e_vars.slotDuration;//increment total tics by timer period.
 
+	/*
     if (ieee154e_stats.numTicsTotal>DUTY_CYCLE_WINDOW_LIMIT){
         ieee154e_stats.numTicsTotal = ieee154e_stats.numTicsTotal>>1;
         ieee154e_stats.numTicsOn    = ieee154e_stats.numTicsOn>>1;
     }
+	*/
 
     //clear vars for duty cycle on this slot   
     ieee154e_vars.radioOnTics=0;

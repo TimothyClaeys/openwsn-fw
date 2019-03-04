@@ -42,15 +42,29 @@ void schedule_init(void) {
     schedule_vars.backoffExponenton   = MINBE-1;
     schedule_vars.maxActiveSlots = MAXACTIVESLOTS;
     
-	// 1
+	// slofoffset 0
     start_slotOffset = SCHEDULE_MINIMAL_6TISCH_SLOTOFFSET;
     if (idmanager_getIsDAGroot()==TRUE) {
         schedule_startDAGroot();
     }
     
-    // serial RX slot(s)
-	// 2
+    // serial TX slot(s)
+	// 1 - 2
     start_slotOffset += SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS;
+    memset(&temp_neighbor,0,sizeof(temp_neighbor));
+    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALTX;running_slotOffset++) {
+        schedule_addActiveSlot(
+            running_slotOffset,                    // slot offset
+            CELLTYPE_SERIALTX,                     // type of slot
+            FALSE,                                 // shared?
+            0,                                     // channel offset
+            &temp_neighbor                         // neighbor
+        );
+    }
+
+	// serial RX slot(s)
+    // 3 - 4
+	start_slotOffset += NUMSERIALTX;
     memset(&temp_neighbor,0,sizeof(temp_neighbor));
     for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALRX;running_slotOffset++) {
         schedule_addActiveSlot(
@@ -61,18 +75,32 @@ void schedule_init(void) {
             &temp_neighbor                         // neighbor
         );
     }
-    
-	start_slotOffset += NUMSERIALRX;
+	
+	// calculate periodic serial slots	
+	start_slotOffset += 50;
     memset(&temp_neighbor,0,sizeof(temp_neighbor));
-    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALTX;running_slotOffset++) {
+    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALRX;running_slotOffset++) {
         schedule_addActiveSlot(
             running_slotOffset,                    // slot offset
-            CELLTYPE_SERIALTX,                    // type of slot
+            CELLTYPE_SERIALRX,                     // type of slot
             FALSE,                                 // shared?
             0,                                     // channel offset
             &temp_neighbor                         // neighbor
         );
     }
+	
+	start_slotOffset += NUMSERIALRX;
+    memset(&temp_neighbor,0,sizeof(temp_neighbor));
+    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALTX;running_slotOffset++) {
+        schedule_addActiveSlot(
+            running_slotOffset,                    // slot offset
+            CELLTYPE_SERIALTX,                     // type of slot
+            FALSE,                                 // shared?
+            0,                                     // channel offset
+            &temp_neighbor                         // neighbor
+        );
+    }
+	
 }
 
 /**
@@ -116,6 +144,7 @@ status information about several modules in the OpenWSN stack.
 
 \returns TRUE if this function printed something, FALSE otherwise.
 */
+/*
 bool debugPrint_schedule(void) {
    debugScheduleEntry_t temp;
    
@@ -158,6 +187,7 @@ bool debugPrint_schedule(void) {
    
    return TRUE;
 }
+*/
 
 /**
 \brief Trigger this module to print status information, over serial.
@@ -167,6 +197,7 @@ status information about several modules in the OpenWSN stack.
 
 \returns TRUE if this function printed something, FALSE otherwise.
 */
+/*
 bool debugPrint_backoff(void) {
    uint8_t temp[2];
    
@@ -183,7 +214,7 @@ bool debugPrint_backoff(void) {
    
    return TRUE;
 }
-
+*/
 //=== from 6top (writing the schedule)
 
 /**

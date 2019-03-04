@@ -24,14 +24,16 @@
 #define MINHOPRANKINCREASE        256  //default value in RPL and Minimal 6TiSCH draft
 
 //=========================== typedef =========================================
-
+/*
 BEGIN_PACK
 typedef struct {
    uint8_t         row;
    neighborRow_t   neighborEntry;
 } debugNeighborEntry_t;
 END_PACK
+*/
 
+/*
 BEGIN_PACK
 typedef struct {
    uint8_t         last_addr_byte;   // last byte of the neighbor's address
@@ -41,13 +43,14 @@ typedef struct {
    uint16_t        asn; 
 } netDebugNeigborEntry_t;
 END_PACK
+*/
 
 //=========================== module variables ================================
    
 typedef struct {
    neighborRow_t        neighbors[MAXNUMNEIGHBORS];
    dagrank_t            myDAGrank;
-   uint8_t              debugRow;
+   //uint8_t              debugRow;
 } neighbors_vars_t;
 
 //=========================== prototypes ======================================
@@ -104,7 +107,7 @@ void          neighbors_resetBackoff(open_addr_t* address);
 // maintenance
 void          neighbors_removeOld(void);
 // debug
-bool          debugPrint_neighbors(void);
+// bool          debugPrint_neighbors(void);
 
 /**
 \}

@@ -40,7 +40,7 @@ The superframe reappears over time and can be arbitrarily long.
   for serial port to transmit data to dagroot.
 */
 
-#define NUMSLOTSOFF          2
+#define NUMSLOTSOFF          6 
 
 /**
 \brief Maximum number of active slots in a superframe.
@@ -52,8 +52,9 @@ in that table; a slot is "active" when it is not of type CELLTYPE_OFF.
 Set this number to the exact number of active slots you are planning on having
 in your schedule, so not to waste RAM.
 */
-// 1 + 3 + 3 + 2 = 9
-#define MAXACTIVESLOTS       (SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS+NUMSERIALRX+NUMSERIALTX+NUMSLOTSOFF)
+// 1 + 10 + 10 + 10 = 31
+#define MAXACTIVESLOTS       (SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS+2*NUMSERIALRX+2*NUMSERIALTX+NUMSLOTSOFF)
+//#define MAXACTIVESLOTS       (SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS+NUMSERIALRX+NUMSERIALTX+NUMSLOTSOFF)
 
 /**
 \brief Minimum backoff exponent.
@@ -100,6 +101,7 @@ typedef enum {
    CELLTYPE_MORESERIALRX     = 6
 } cellType_t;
 
+BEGIN_PACK
 typedef struct {
    slotOffset_t    slotOffset;
    cellType_t      type;
@@ -112,7 +114,9 @@ typedef struct {
    asn_t           lastUsedAsn;
    void*           next;
 } scheduleEntry_t;
+END_PACK
 
+/*
 BEGIN_PACK
 typedef struct {
    uint8_t         row;
@@ -127,7 +131,9 @@ typedef struct {
    asn_t           lastUsedAsn;
 } debugScheduleEntry_t;
 END_PACK
+*/
 
+BEGIN_PACK
 typedef struct {
   uint8_t          address[LENGTH_ADDR64b];
   cellType_t       link_type;
@@ -135,9 +141,11 @@ typedef struct {
   slotOffset_t     slotOffset;
   channelOffset_t  channelOffset;
 }slotinfo_element_t;
+END_PACK
 
 //=========================== variables =======================================
 
+BEGIN_PACK
 typedef struct {
    scheduleEntry_t  scheduleBuf[MAXACTIVESLOTS];
    scheduleEntry_t* currentScheduleEntry;
@@ -147,16 +155,17 @@ typedef struct {
    uint8_t          frameNumber;
    uint8_t          backoffExponenton;
    uint8_t          backoff;
-   uint8_t          debugPrintRow;
+   //uint8_t          debugPrintRow;
 } schedule_vars_t;
+END_PACK
 
 //=========================== prototypes ======================================
 
 // admin
 void               schedule_init(void);
 void               schedule_startDAGroot(void);
-bool               debugPrint_schedule(void);
-bool               debugPrint_backoff(void);
+//bool               debugPrint_schedule(void);
+//bool               debugPrint_backoff(void);
 
 // from 6top
 void               schedule_setFrameLength(frameLength_t newFrameLength);

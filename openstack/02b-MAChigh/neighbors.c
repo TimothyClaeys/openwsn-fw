@@ -635,6 +635,7 @@ status information about several modules in the OpenWSN stack.
 
 \returns TRUE if this function printed something, FALSE otherwise.
 */
+/*
 bool debugPrint_neighbors(void) {
     debugNeighborEntry_t temp;
     neighbors_vars.debugRow=(neighbors_vars.debugRow+1)%MAXNUMNEIGHBORS;
@@ -643,6 +644,7 @@ bool debugPrint_neighbors(void) {
     openserial_printStatus(STATUS_NEIGHBORS,(uint8_t*)&temp,sizeof(debugNeighborEntry_t));
     return TRUE;
 }
+*/
 
 //=========================== private =========================================
 

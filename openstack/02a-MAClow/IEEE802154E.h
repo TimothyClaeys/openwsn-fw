@@ -226,6 +226,7 @@ typedef struct {
 
 //=========================== module variables ================================
 
+BEGIN_PACK
 typedef struct {
    // misc
    asn_t                     asn;                     // current absolute slot number
@@ -267,7 +268,9 @@ typedef struct {
    opentimers_id_t           timerId;                 // id of timer used for implementing TSCH slot FSM
    uint32_t                  startOfSlotReference;    // the time refer to the beginning of slot
 } ieee154e_vars_t;
+END_PACK
 
+/*
 BEGIN_PACK
 typedef struct {
    uint8_t                   numSyncPkt;              // how many times synchronized on a non-ACK packet
@@ -280,12 +283,15 @@ typedef struct {
 } ieee154e_stats_t;
 END_PACK
 
+BEGIN_PACK
 typedef struct {
    PORT_TIMER_WIDTH          num_newSlot;
    PORT_TIMER_WIDTH          num_timer;
    PORT_TIMER_WIDTH          num_startOfFrame;
    PORT_TIMER_WIDTH          num_endOfFrame;
 } ieee154e_dbg_t;
+END_PACK
+*/
 
 //=========================== prototypes ======================================
 
@@ -311,9 +317,9 @@ uint16_t           ieee154e_getTimeCorrection(void);
 void               ieee154e_startOfFrame(PORT_TIMER_WIDTH capturedTime);
 void               ieee154e_endOfFrame(PORT_TIMER_WIDTH capturedTime);
 // misc
-bool               debugPrint_asn(void);
-bool               debugPrint_isSync(void);
-bool               debugPrint_macStats(void);
+//bool               debugPrint_asn(void);
+//bool               debugPrint_isSync(void);
+//bool               debugPrint_macStats(void);
 
 /**
 \}
