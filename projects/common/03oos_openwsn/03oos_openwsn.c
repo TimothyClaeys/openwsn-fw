@@ -9,11 +9,14 @@
 #include "openstack.h"
 #include "opendefs.h"
 
+#if (defined DTLS_ENABLED) || (defined TLS_ENABLED)
+unsigned char heap_array[17000];
+#endif
+
 int mote_main(void) {
 
 #if (defined DTLS_ENABLED) || (defined TLS_ENABLED)
-   unsigned char memory_buf[15000];
-   mbedtls_memory_buffer_alloc_init( memory_buf, sizeof(memory_buf) );
+   mbedtls_memory_buffer_alloc_init( heap_array, sizeof(heap_array) );
 #endif
    
    // initialize
