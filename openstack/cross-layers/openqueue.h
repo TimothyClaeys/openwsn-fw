@@ -13,8 +13,8 @@
 
 //=========================== define ==========================================
 
-#define QUEUELENGTH     10
-#define BIGQUEUELENGTH  2
+#define QUEUELENGTH     15
+#define BIGQUEUELENGTH  6
 //=========================== typedef =========================================
 
 typedef struct {

@@ -96,12 +96,15 @@ OpenQueueEntry_t* openqueue_getFreePacketBuffer(uint8_t creator) {
          openqueue_vars.queue[i].creator=creator;
          openqueue_vars.queue[i].owner=COMPONENT_OPENQUEUE;
          ENABLE_INTERRUPTS();
-         /*
-         if (idmanager_getIsDAGroot() != TRUE){
+         num_of_openqueue_entries++;
+        
+		 /* 
+		 if (idmanager_getIsDAGroot() != TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_ALLOC_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
-         */
-         return &openqueue_vars.queue[i];
+		 */
+         
+		 return &openqueue_vars.queue[i];
       }
    }
    ENABLE_INTERRUPTS();
@@ -124,8 +127,7 @@ OpenQueueEntry_t*  openqueue_getFreeBigPacket(uint8_t creator){
             openqueue_vars.bigPacket[i].standard_size_msg.owner==COMPONENT_NULL
          ) {
  
-         num_of_openqueue_entries++;
-		 /*
+		 /* 
          if (idmanager_getIsDAGroot() != TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_ALLOC_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
@@ -167,11 +169,13 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
          creator = openqueue_vars.queue[i].creator;
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
          ENABLE_INTERRUPTS();
-         /*
+         num_of_openqueue_entries--;
+		 /*
          if (idmanager_getIsDAGroot() != TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
-         */
+		 */
+
          return E_SUCCESS;
       }
    }
@@ -185,14 +189,14 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t* pkt) {
                                      (errorparameter_t)0);
             }
             
-            num_of_openqueue_entries--;
 
             creator = openqueue_vars.bigPacket[i].standard_size_msg.creator;
-			/*
+		    /*	
             if (idmanager_getIsDAGroot() != TRUE){
                openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
             }
 			*/
+		
             openqueue_reset_big_entry((OpenQueueBigEntry_t*)pkt);
             
             ENABLE_INTERRUPTS();
@@ -218,6 +222,7 @@ void openqueue_removeAllCreatedBy(uint8_t creator) {
    DISABLE_INTERRUPTS();
    for (i=0;i<QUEUELENGTH;i++){
       if (openqueue_vars.queue[i].creator==creator) {
+         num_of_openqueue_entries--;
          openqueue_reset_entry(&(openqueue_vars.queue[i]));
       }
    }
@@ -225,15 +230,14 @@ void openqueue_removeAllCreatedBy(uint8_t creator) {
    for (i=0;i<BIGQUEUELENGTH;i++){
       if (openqueue_vars.bigPacket[i].standard_size_msg.creator==creator) {
          openqueue_reset_big_entry(&(openqueue_vars.bigPacket[i]));
-         num_of_openqueue_entries--;
-		 /*
-         if (idmanager_getIsDAGroot() != TRUE){
+     	 /* 
+	     if (idmanager_getIsDAGroot() != TRUE){
             openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
          }
 		 */
       }
    }
-   /*
+   /* 
    if (idmanager_getIsDAGroot() != TRUE){
       openserial_printInfo(COMPONENT_OPENQUEUE, ERR_FREE_NUM_ENTRIES, num_of_openqueue_entries, creator); 
    }
