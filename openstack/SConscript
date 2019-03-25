@@ -61,6 +61,7 @@ sources_h = [
     #=== 04-TRAN
     os.path.join('04-TRAN','openudp.h'),
     os.path.join('04-TRAN','opentcp.h'),
+    os.path.join('04-TRAN','opentcp_config.h'),
     #=== cross-layers
     os.path.join('cross-layers','idmanager.h'),
     os.path.join('cross-layers','openqueue.h'),

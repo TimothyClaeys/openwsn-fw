@@ -39,10 +39,10 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define MAXNUMNEIGHBORS  1
 
 // maximum celllist length
-#define CELLLIST_MAX_LEN 15
+#define CELLLIST_MAX_LEN 4
 
 // big packet's size
-#define BIG_PACKET_SIZE  1150 
+#define BIG_PACKET_SIZE  512 
 
 enum {
    E_SUCCESS                           = 0,
@@ -269,82 +269,99 @@ enum {
    ERR_SCHEDULE_ADDDUPLICATESLOT       = 0x41, // the slot {0} to be added is already in schedule
    ERR_UNSUPPORTED_FORMAT              = 0x42, // the received packet format is not supported {code location {0}}
    ERR_UNSUPPORTED_METADATA            = 0x43, // the metadata type is not suppored
+   ERR_SEND_DAO                        = 0x44, // [GREEN]Sent DAO packet[END]
+   ERR_UPDATE_DAGRANK                  = 0x45, // [GREEN]Received DIO and update DAGRANK: {0}[END]
+   ERR_NEW_ENTRY                       = 0x46, // [GREEN]Added new neighbor: {0} to neighbor table.[END]
+   ERR_REMOVE_ENTRY                    = 0x47, // [YELLOW]Added new neighbor: {0} to neighbor table.[END]
+   ERR_BAD_RSSI                        = 0x48, // [RED]Packet discarded, bad rssi: {0}[END]
+   ERR_ALLOC_NUM_ENTRIES			   = 0x93, // Allocating small packet (total: {0} - creator {1})
+   ERR_FREE_NUM_ENTRIES			       = 0x94, // Freeing small packet (total: {0} - creator {1})
+   
    //l3
-   ERR_6LORH_DEADLINE_EXPIRED	       = 0x44, // the received packet has expired
-   ERR_6LORH_DEADLINE_DROPPED          = 0x45, // packet expiry time reached, dropped
+   ERR_6LORH_DEADLINE_EXPIRED	       = 0x49, // the received packet has expired
+   ERR_6LORH_DEADLINE_DROPPED          = 0x4a, // packet expiry time reached, dropped
+ 
+   //l3 - frag 
+   ERR_REASSEMBLE                      = 0x4b, // reassemble 6lowpan fragments, size: {0} - tag: {1}
+   ERR_FAST_FORWARD                    = 0x4c, // fast forward of 6lowpan packet (dispatch: {0} && total length: {1})
+   ERR_TX_6LOWPAN_FRAGMENT             = 0x4d, // TX : 6LoWPAN fragment offset: {0} - tag: {1}
+   ERR_TX_6LOWPAN_FRAGMENT_FAILED      = 0x4e, // [RED]Transmission of 6LowPAN fragment failed[END]
+   ERR_MISSING_FRAGS                   = 0x4f, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
+
+   //l4 - TCP
+   ERR_TCP_SEND		                   = 0x51, // [GREEN]Sending {0} Bytes of TCP data (mySeqNum: {1})[END]
+   ERR_TCP_SEND_ACK	                   = 0x52, // [GREEN]Sending TCP ACK (myAckNum: {0})[END]
+   ERR_TCP_REORDER_OR_LOSS	           = 0x53, // [MAGENTA]Packet loss or packet reorder detected, got {0} - expexted {1}[END]
+   ERR_TCP_RECV		                   = 0x54, // [GREEN]Receiving TCP data (hisSeqNum: {0} - hisAckNum: {1})[END]
+   ERR_TCP_CONNECTING                  = 0x55, // initiating TCP connection on port {0}
+   ERR_TCP_CONN_ESTABLISHED            = 0x56, // [GREEN]TCP connection established, dest. port: {0}[END]
+   ERR_TCP_CLOSED		               = 0x57, // [GREEN]TCP connection closed[END]
+   ERR_TCP_RETRANSMISSION              = 0x58, // [MAGENTA]retransmission attempt... (SeqNum: {0} - next RTO: {1})[END]
+   ERR_TCP_RETRANSMISSION_FAILED       = 0x59, // [RED]retransmission attempt failed[END]
+   ERR_TCP_MERGE_STORED_PACKETS        = 0x5a, // [CYAN]Merging stored out-of-order packets (push up to {0})[END]
+   ERR_TCP_BYTES_IN_FLIGHT       	   = 0x5b, // [CYAN]There are still {0} bytes in flight[END]
+   ERR_TCP_USELESS_RETRANSMIT          = 0x5c, // An unnecessary retransmission was received (hisSeqNum: {0} - myAckNum: {1})
+   ERR_TCP_RTT_RTO			           = 0x92, // RTT: {0} and RTO: {1}
+ 
+   // (D)TLS 
+   ERR_TLS_INIT_FAILED                 = 0x5d, // failed to initialize OPENTLS
+   ERR_WRONG_TLS_STATE                 = 0x5e, // [RED]wrong TLS state: {0}[END]
+   ERR_TLS_TRANSMISSION_FAILED         = 0x5f, // [RED]TLS fragment transmission failed[END]
+   ERR_TLS_RECV_BYTES                  = 0x60, // [GREEN]bytes in receive buffer: {0} @ asn: {1}[END]
+   ERR_REQUESTING_CLIENT_HELLO         = 0x61, // [BLUE]client hello request, state: {0}, next state in: {1}[END]
+   ERR_SENDING_CLIENT_HELLO            = 0x62, // [BLUE]client hello message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_HELLO            = 0x63, // [BLUE]server hello message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_CERT             = 0x64, // [BLUE]server certificate, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_KEX              = 0x65, // [BLUE]server key exchange message, state: {0}, next state in: {1}[END]
+   ERR_PARSING_SERVER_HELLO_DONE       = 0x66, // [BLUE]server hello done, state: {0}, next state in: {1}[END]
+   ERR_CERTIFICATE_REQUEST             = 0x67, // [BLUE]possible client certificate request, state: {0}, next state in: {1}[END]
+   ERR_PREP_CLIENT_CERT                = 0x68, // [BLUE]possible client cert, state: {0}, next state in: {1}[END]
+   ERR_SENDING_CLIENT_KEX              = 0x69, // [BLUE]client key exchange, state: {0}, next state in: {1}[END]
+   ERR_CLIENT_CHANGE_CIPHER_SPEC       = 0x6a, // [BLUE]client change cipher spec, state: {0}, next state in: {1}[END]
+   ERR_SERVER_CHANGE_CIPHER_SPEC       = 0x6b, // [BLUE]server change cipher spec, state: {0}, next state in: {1}[END]
+   ERR_SERVER_DONE                     = 0x6c, // [BLUE]server done, state: {0}, next state in: {1}[END]
+   ERR_FLUSH_BUFFERS                   = 0x6d, // [BLUE]flushing buffers, state: {0}, next state in: {1}[END]
+   ERR_CERT_VERIFY                     = 0x6e, // [BLUE]possibly verify certificate, state: {0}, next state in: {1}[END]
+   ERR_CLIENT_DONE                     = 0x6f, // [BLUE]client done, state: {0}, next state in: {1}[END]
+   ERR_HANDSHAKE_WRAPUP                = 0x70, // [BLUE]wrapping up handshake, state: {0}, next state in: {1}[END]
+   ERR_TLS_HANDSHAKE_FAILED            = 0x71, // [RED]TLS handshake failed with error code {0} in state {1}[END]
+   ERR_TLS_TRUSTED_CERT                = 0x72, // [MAGENTA]skip trusted certificate[END]
+   ERR_TLS_STATE_DONE                  = 0x73, // [BG-GREEN][BOLD][WHITE]DONE![END]
+   ERR_MBEDTLS_ERROR                   = 0x74, // [RED]MBEDTLS failed with error codes: {0} - {1}[END]
+   ERR_SESSION_SAVED				   = 0x75, // [GREEN]Saved TLS Session[END]
+   ERR_SESSION_RESTORED				   = 0x76, // [GREEN]Restored TLS Session[END]
+   ERR_MBEDTLS_HEAP_ALLOC			   = 0x77, // allocating heap memory, start: {0} -- stop: {1}
+   ERR_MBEDTLS_HEAP_FREE			   = 0x78, // freeing heap memory, start: {0} -- stop: {1}
+   ERR_OPENTLS_RESET	               = 0x79, // [RED]resetting TLS state machine in state {0}[END]
+   ERR_WAITING_FOR_DATA                = 0x7a, // [YELLOW]waiting for handshake data[END]
+   ERR_WAITING_FOR_TX                  = 0x7b, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
+   ERR_BUSY_IN_STATE                   = 0x7c, // [YELLOW]still processing previous state: {0}[END]
+   ERR_MBEDTLS_MEM_ALLOC_FAILED        = 0x7d, // [RED]heap memory allocation failed (no more memory available)[END]
+   ERR_MBEDTLS_INIT_FAILED             = 0x7e, // mbedtls init failed! (code location: {0})
+   ERR_OPENDTLS_RESET	               = 0x7f, // resetting DTLS state machine in state {0}
+   ERR_INSUFFICIENT_DATA               = 0x80, // some data was received but not sufficient
+   ERR_OUT_OF_ORDER_DATAGRAM           = 0x81, // an out-of-order datagram was received
+   ERR_DTLS_DATAGRAM_BUFFERED		   = 0x82, // a dtls datagram was buffered
+   ERR_DTLS_BUFFER_FULL				   = 0x83, // [RED]dtls buffer for out-of-order messages is full: buffered: {0} capacity: {1}[END]
+   ERR_LOAD_BUFFERED_DTLS_MSG		   = 0x84, // load a buffered message
+   ERR_UPDATE_READ_BUFFER              = 0x85, // updating receive buffer, read: {0}, left: {1}
+   
    // join and OSCOAP
-   ERR_JOINED                          = 0x46, // node joined
-   ERR_SEQUENCE_NUMBER_OVERFLOW        = 0x47, // OSCOAP sequence number reached maximum value
-   ERR_BUFFER_OVERFLOW                 = 0x48, // OSCOAP buffer overflow detected {code location {0}}
-   ERR_REPLAY_FAILED                   = 0x49, // OSCOAP replay protection failed
-   ERR_DECRYPTION_FAILED               = 0x4a, // OSCOAP decryption and tag verification failed
-   ERR_ABORT_JOIN_PROCESS              = 0x4b, // aborted join process {code location {0}}
+   ERR_JOINED                          = 0x86, // node joined
+   ERR_SEQUENCE_NUMBER_OVERFLOW        = 0x87, // OSCOAP sequence number reached maximum value
+   ERR_BUFFER_OVERFLOW                 = 0x88, // OSCOAP buffer overflow detected {code location {0}}
+   ERR_REPLAY_FAILED                   = 0x89, // OSCOAP replay protection failed
+   ERR_DECRYPTION_FAILED               = 0x8a, // OSCOAP decryption and tag verification failed
+   ERR_ABORT_JOIN_PROCESS              = 0x8b, // aborted join process {code location {0}}
+   
    // apps
-   ERR_SENDING_ECHO_REQ                = 0x50, // Sending an echo request
-   ERR_RECEIVED_ECHO       	           = 0x51, // Received echo
-   ERR_ECHO_FAIL					   = 0x52, // Echo app failed (loc.: {0})
-   ERR_RECV                            = 0x53, // [CYAN]Received packet @ asn: {0}, role: {1}[END]
-   ERR_SEND                            = 0x54, // [CYAN]Sending packet @ slotoffset: {0}, role: {1}[END]
-   ERR_DEBUG                           = 0x55, // Log message {0} -- {1}
-   ERR_TCP_TIMER_RESET                 = 0x56, // Timeout on TCP connection
-   ERR_TCP_CONNECTING                  = 0x57, // initiating TCP connection on port {0}
-   ERR_TCP_CONN_ESTABLISHED            = 0x58, // [GREEN]TCP connection established, dest. port: {0}[END]
-   ERR_TLS_INIT_FAILED                 = 0x59, // failed to initialize OPENTLS
-   ERR_WRONG_TLS_STATE                 = 0x5a, // [RED]wrong TLS state: {0}[END]
-   ERR_TLS_TRANSMISSION_FAILED         = 0x5b, // [RED]TLS fragment transmission failed[END]
-   ERR_TLS_RECV_BYTES                  = 0x5c, // [GREEN]bytes in receive buffer: {0} @ asn: {1}[END]
-   ERR_REQUESTING_CLIENT_HELLO         = 0x5d, // [BLUE]client hello request, state: {0}, next state in: {1}[END]
-   ERR_SENDING_CLIENT_HELLO            = 0x5e, // [BLUE]client hello message, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_HELLO            = 0x5f, // [BLUE]server hello message, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_CERT             = 0x60, // [BLUE]server certificate, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_KEX              = 0x61, // [BLUE]server key exchange message, state: {0}, next state in: {1}[END]
-   ERR_PARSING_SERVER_HELLO_DONE       = 0x62, // [BLUE]server hello done, state: {0}, next state in: {1}[END]
-   ERR_CERTIFICATE_REQUEST             = 0x63, // [BLUE]possible client certificate request, state: {0}, next state in: {1}[END]
-   ERR_PREP_CLIENT_CERT                = 0x64, // [BLUE]possible client cert, state: {0}, next state in: {1}[END]
-   ERR_SENDING_CLIENT_KEX              = 0x65, // [BLUE]client key exchange, state: {0}, next state in: {1}[END]
-   ERR_CLIENT_CHANGE_CIPHER_SPEC       = 0x66, // [BLUE]client change cipher spec, state: {0}, next state in: {1}[END]
-   ERR_SERVER_CHANGE_CIPHER_SPEC       = 0x67, // [BLUE]server change cipher spec, state: {0}, next state in: {1}[END]
-   ERR_SERVER_DONE                     = 0x68, // [BLUE]server done, state: {0}, next state in: {1}[END]
-   ERR_FLUSH_BUFFERS                   = 0x69, // [BLUE]flushing buffers, state: {0}, next state in: {1}[END]
-   ERR_CERT_VERIFY                     = 0x6a, // [BLUE]possibly verify certificate, state: {0}, next state in: {1}[END]
-   ERR_CLIENT_DONE                     = 0x6b, // [BLUE]client done, state: {0}, next state in: {1}[END]
-   ERR_HANDSHAKE_WRAPUP                = 0x6c, // [BLUE]wrapping up handshake, state: {0}, next state in: {1}[END]
-   ERR_TLS_HANDSHAKE_FAILED            = 0x6d, // [RED]TLS handshake failed with error code {0} in state {1}[END]
-   ERR_TLS_TRUSTED_CERT                = 0x6e, // [MAGENTA]skip trusted certificate[END]
-   ERR_TLS_STATE_DONE                  = 0x6f, // [BG-GREEN][BOLD][WHITE]DONE![END]
-   ERR_MBEDTLS_ERROR                   = 0x70, // [RED]MBEDTLS failed with error codes: {0} - {1}[END]
-   ERR_TCP_RETRANSMISSION              = 0x71, // retransmission attempt
-   ERR_UPDATE_READ_BUFFER              = 0x72, // updating receive buffer, read: {0}, left: {1}
-   ERR_WAITING_FOR_DATA                = 0x73, // [YELLOW]waiting for handshake data[END]
-   ERR_WAITING_FOR_TX                  = 0x74, // [YELLOW]waiting for transmission of data, state: {0}, next state in: {1}[END]
-   ERR_BUSY_IN_STATE                   = 0x75, // [YELLOW]still processing previous state: {0}[END]
-   ERR_MBEDTLS_MEM_ALLOC_FAILED        = 0x76, // [RED]heap memory allocation failed (no more memory available)[END]
-   ERR_UPDATE_DAGRANK                  = 0x77, // [GREEN]Received DIO and update DAGRANK: {0}[END]
-   ERR_SEND_DAO                        = 0x78, // [GREEN]Sent DAO packet[END]
-   ERR_NEW_ENTRY                       = 0x79, // [GREEN]Added new neighbor: {0} to neighbor table.[END]
-   ERR_REMOVE_ENTRY                    = 0x7a, // [YELLOW]Added new neighbor: {0} to neighbor table.[END]
-   ERR_BAD_RSSI                        = 0x7b, // [RED]Packet discarded, bad rssi: {0}[END]
-   ERR_INSUFFICIENT_TX                 = 0x7c, // [YELLOW]Don't update MyDagRank after DIO, insufficient TX[END]
-   ERR_TX_6LOWPAN_FRAGMENT_FAILED      = 0x7d, // [RED]Transmission of 6LowPAN fragment failed[END]
-   ERR_ALLOC_NUM_ENTRIES               = 0x7e, // [MAGENTA]Allocate openqueue entry, total entries {0}, creator {1} [END]
-   ERR_FREE_NUM_ENTRIES                = 0x7f, // [MAGENTA]Free openqueue entry, total entries {0}, creator {1} [END]
-   ERR_MISSING_FRAGS                   = 0x80, // [RED] Message was declared to be fragmented, but no fragments were found. [END]
-   ERR_TECHO_SUCCESS		           = 0x81, // [GREEN] Echo was succesfull [END]
-   ERR_TCP_RETRANSMISSION_FAILED       = 0x82, // [RED]retransmission attempt failed[END]
-   ERR_REASSEMBLE                      = 0x83, // reassemble 6lowpan fragments, size: {0}
-   ERR_FAST_FORWARD                    = 0x84, // fast forward of 6lowpan packet
-   ERR_MBEDTLS_INIT_FAILED             = 0x85, // mbedtls init failed! (code location: {0})
-   ERR_OPENDTLS_RESET	               = 0x86, // resetting DTLS state machine in state {0}
-   ERR_INSUFFICIENT_DATA               = 0x87, // some data was received but not sufficient
-   ERR_OUT_OF_ORDER_DATAGRAM           = 0x88, // an out-of-order datagram was received
-   ERR_DTLS_DATAGRAM_BUFFERED		   = 0x89, // a dtls datagram was buffered
-   ERR_DTLS_BUFFER_FULL				   = 0x90, // [RED]dtls buffer for out-of-order messages is full: buffered: {0} capacity: {1}[END]
-   ERR_LOAD_BUFFERED_DTLS_MSG		   = 0x91, // load a buffered message
-   ERR_MBEDTLS_HEAP_ALLOC			   = 0x92, // allocating heap memory, start: {0} -- stop: {1}
-   ERR_MBEDTLS_HEAP_FREE			   = 0x93, // freeing heap memory, start: {0} -- stop: {1}
-   ERR_OPENTLS_RESET	               = 0x94, // [RED]resetting TLS state machine in state {0}[END]
-   ERR_TCP_SEND						   = 0x95, // [GREEN] Sent TCP packet [END]
-   ERR_TCP_ACK						   = 0x96, // [GREEN] Received TCP ack [END] 
+   ERR_SENDING_ECHO_REQ                = 0x8c, // Sending an echo request
+   ERR_RECEIVED_ECHO       	           = 0x8d, // Received echo
+   ERR_ECHO_FAIL					   = 0x8e, // Echo app failed (loc.: {0})
+   ERR_RECV                            = 0x8f, // [CYAN]Received packet @ asn: {0}, role: {1}[END]
+   ERR_SEND                            = 0x90, // [CYAN]Sending packet @ slotoffset: {0}, role: {1}[END]
+   ERR_DEBUG                           = 0x91, // Log message {0} -- {1}
+   
 };
 
 //=========================== typedef =========================================
@@ -402,7 +419,9 @@ typedef struct {
    uint16_t      l4_sourcePortORicmpv6Type;                     // l4 source port
    uint16_t      l4_destination_port;                           // l4 destination port
    uint8_t*      l4_payload;                                    // pointer to the start of the payload of l4 (used for retransmits)
+   uint16_t      l4_header_length;                              // length of the payload of l4 (used for retransmits)
    uint16_t      l4_length;                                     // length of the payload of l4 (used for retransmits)
+   uint8_t       l4_retransmits;                                // retransmission attemps
    //l3
    open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack) 
    open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address 
