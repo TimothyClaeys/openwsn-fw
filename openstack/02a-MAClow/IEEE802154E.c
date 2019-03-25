@@ -1275,10 +1275,10 @@ port_INLINE void activity_ti3(void) {
     // give the 'go' to transmit
     radio_txNow();
 #endif
-    //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_OPENTLS ){
-    if ( !idmanager_getIsDAGroot()) {
-		openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, ieee154e_vars.localCopyForTransmission.creator);
-	}
+    //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_FRAG ){
+    //	if ( !idmanager_getIsDAGroot()) {
+	//		openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.slotOffset, ieee154e_vars.localCopyForTransmission.creator);
+	//	}
     //}
     //if ( ieee154e_vars.localCopyForTransmission.creator == COMPONENT_ICMPv6RPL && icmpv6rpl_busySendingDAO() == TRUE ){
     // openserial_printInfo(COMPONENT_IEEE802154E, ERR_SEND, ieee154e_vars.asn.bytes0and1, 0);
@@ -1797,7 +1797,7 @@ port_INLINE void activity_rie3(void) {
                          (errorparameter_t)ieee154e_vars.state,
                          (errorparameter_t)ieee154e_vars.slotOffset);
    
-    // abort
+    // abori
     endSlot();
 }
 
@@ -1841,9 +1841,9 @@ port_INLINE void activity_ri5(PORT_TIMER_WIDTH capturedTime) {
     ieee154e_vars.dataReceived->creator = COMPONENT_IEEE802154E;
     ieee154e_vars.dataReceived->owner   = COMPONENT_IEEE802154E;
 
-	if ( idmanager_getIsDAGroot() ) {
-    	openserial_printInfo( COMPONENT_IEEE802154E, ERR_RECV, ieee154e_vars.asn.bytes0and1, 0 );
-	}
+	//if ( idmanager_getIsDAGroot() ) {
+    //	openserial_printInfo( COMPONENT_IEEE802154E, ERR_RECV, ieee154e_vars.asn.bytes0and1, 0 );
+	//}
     
 	/*
     The do-while loop that follows is a little parsing trick.
