@@ -6,6 +6,7 @@
 #include "schedule.h"
 #include "openapps.h"
 #include "openrandom.h"
+#include "openserial.h"
 #include "idmanager.h"
 #include "icmpv6rpl.h"
 #include "IEEE802154E.h"
@@ -45,16 +46,20 @@ void msf_init(void) {
         (sixtop_sf_translatemetadata)msf_translateMetadata,
         (sixtop_sf_handle_callback)msf_handleRCError
     );
-    msf_vars.housekeepingTimerId = opentimers_create();
     msf_vars.housekeepingPeriod  = HOUSEKEEPING_PERIOD;
+    
+	//housekeeptimer
+	msf_vars.housekeepingTimerId = opentimers_create();
     opentimers_scheduleIn(
         msf_vars.housekeepingTimerId,
-        openrandom_getRandomizePeriod(msf_vars.housekeepingPeriod, msf_vars.housekeepingPeriod),
+        openrandom_getRandomizePeriod(msf_vars.housekeepingPeriod, msf_vars.housekeepingPeriod),  // period 30000 - range 30000
         TIME_MS,
         TIMER_ONESHOT,
         msf_timer_housekeeping_cb
     );
-    msf_vars.waitretryTimerId    = opentimers_create();
+    
+	// retryTimer
+	msf_vars.waitretryTimerId    = opentimers_create();
 }
 
 // called by schedule
@@ -223,12 +228,12 @@ void msf_trigger6pAdd(void){
         return;
     }
 
-    if (msf_candidateAddCellList(celllist_add,NUMCELLS_MSF)==FALSE){
+	if (msf_candidateAddCellList(celllist_add,NUMCELLS_MSF)==FALSE){
         // failed to get cell list to add
         return;
     }
 
-    sixtop_request(
+    if ( sixtop_request(
         IANA_6TOP_CMD_ADD,                  // code
         &neighbor,                          // neighbor
         NUMCELLS_MSF,                       // number cells
@@ -238,7 +243,9 @@ void msf_trigger6pAdd(void){
         IANA_6TISCH_SFID_MSF,               // sfid
         0,                                  // list command offset (not used)
         0                                   // list command maximum celllist (not used)
-    );
+    	) == E_FAIL ) {
+		openserial_printError(COMPONENT_MSF, ERR_FAILED_SIXTOP_REQ, (errorparameter_t)0, (errorparameter_t)0);
+	}
 }
 
 void msf_trigger6pDelete(void){
@@ -294,10 +301,13 @@ bool msf_candidateAddCellList(
     frameLength_t slotoffset;
     uint8_t numCandCells;
 
+	uint8_t cells [] = {4,5,9,10};
+
     memset(cellList,0,CELLLIST_MAX_LEN*sizeof(cellInfo_ht));
     numCandCells=0;
     for(i=0;i<CELLLIST_MAX_LEN;i++){
-        slotoffset = openrandom_get16b()%schedule_getFrameLength();
+        // slotoffset = openrandom_get16b()%schedule_getFrameLength();
+        slotoffset = cells[i]; 
         if(schedule_isSlotOffsetAvailable(slotoffset)==TRUE){
             cellList[numCandCells].slotoffset       = slotoffset;
             cellList[numCandCells].channeloffset    = openrandom_get16b()&0x0F;

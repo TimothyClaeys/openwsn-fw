@@ -1619,13 +1619,14 @@ bool sixtop_addCells(
     for(i = 0;i<CELLLIST_MAX_LEN;i++){
         if (cellList[i].isUsed){
             hasCellsAdded = TRUE;
-            schedule_addActiveSlot(
+			schedule_addActiveSlot(
                 cellList[i].slotoffset,
                 type,
                 isShared,
                 cellList[i].channeloffset,
                 &temp_neighbor
             );
+            openserial_printInfo(COMPONENT_SIXTOP, ERR_CELL_ADDITION, cellList[i].slotoffset, cellList[i].channeloffset);
          }
     }
 

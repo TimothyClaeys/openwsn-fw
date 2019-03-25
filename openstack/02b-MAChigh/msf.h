@@ -14,13 +14,13 @@
 
 #define IANA_6TISCH_SFID_MSF    0
 #define CELLOPTIONS_MSF         CELLOPTIONS_TX | CELLOPTIONS_RX | CELLOPTIONS_SHARED
-#define NUMCELLS_MSF            1
+#define NUMCELLS_MSF            4
 
-#define MAX_NUMCELLS                   16
+#define MAX_NUMCELLS                   	4
 #define LIM_NUMCELLSUSED_HIGH          12
 #define LIM_NUMCELLSUSED_LOW            4
 
-#define HOUSEKEEPING_PERIOD          30000 // miliseconds
+#define HOUSEKEEPING_PERIOD          10000 // miliseconds
 #define QUARANTINE_DURATION            300 // seconds
 #define WAITDURATION_MIN             30000 // miliseconds
 #define WAITDURATION_RANDOM_RANGE    30000 // miliseconds

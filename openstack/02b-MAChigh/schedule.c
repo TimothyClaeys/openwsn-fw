@@ -49,7 +49,7 @@ void schedule_init(void) {
     }
     
     // serial TX slot(s)
-	// 1 - 2
+	// 1 - 3
     start_slotOffset += SCHEDULE_MINIMAL_6TISCH_ACTIVE_CELLS;
     memset(&temp_neighbor,0,sizeof(temp_neighbor));
     for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALTX;running_slotOffset++) {
@@ -63,8 +63,8 @@ void schedule_init(void) {
     }
 
 	// serial RX slot(s)
-    // 3 - 4
-	start_slotOffset += NUMSERIALTX;
+    // 7 - 9
+	start_slotOffset += NUMSERIALTX + 2;
     memset(&temp_neighbor,0,sizeof(temp_neighbor));
     for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALRX;running_slotOffset++) {
         schedule_addActiveSlot(
@@ -75,32 +75,6 @@ void schedule_init(void) {
             &temp_neighbor                         // neighbor
         );
     }
-	
-	// calculate periodic serial slots	
-	start_slotOffset += 50;
-    memset(&temp_neighbor,0,sizeof(temp_neighbor));
-    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALRX;running_slotOffset++) {
-        schedule_addActiveSlot(
-            running_slotOffset,                    // slot offset
-            CELLTYPE_SERIALRX,                     // type of slot
-            FALSE,                                 // shared?
-            0,                                     // channel offset
-            &temp_neighbor                         // neighbor
-        );
-    }
-	
-	start_slotOffset += NUMSERIALRX;
-    memset(&temp_neighbor,0,sizeof(temp_neighbor));
-    for (running_slotOffset=start_slotOffset;running_slotOffset<start_slotOffset+NUMSERIALTX;running_slotOffset++) {
-        schedule_addActiveSlot(
-            running_slotOffset,                    // slot offset
-            CELLTYPE_SERIALTX,                     // type of slot
-            FALSE,                                 // shared?
-            0,                                     // channel offset
-            &temp_neighbor                         // neighbor
-        );
-    }
-	
 }
 
 /**
