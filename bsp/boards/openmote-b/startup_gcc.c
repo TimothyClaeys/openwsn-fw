@@ -84,7 +84,7 @@ void Reset_Handler(void);                            /* Reset Handler */
   User Initial Stack & Heap
  *----------------------------------------------------------------------------*/
 #ifndef __STACK_SIZE
-  #define   __STACK_SIZE  0x00005000
+  #define   __STACK_SIZE  0x00000A00
 #endif
 static uint8_t stack[__STACK_SIZE] __attribute__ ((aligned(8), used, section(".stack")));
 
@@ -237,16 +237,17 @@ void Reset_Handler(void) {
 
   uint32_t *fptr = (uint32_t*)0x20007fe0;
   uint32_t *eptr = (uint32_t*)0x20000000;
+  
+  for( ; fptr > eptr ; ){
+      *fptr = 0xFFFFFFFF;
+      fptr -= 0x1;    
+  }
 /*  Firstly it copies data from read only memory to RAM. There are two schemes
  *  to copy. One can copy more than one sections. Another can only copy
  *  one section.  The former scheme needs more instructions and read-only
  *  data to implement than the latter.
  *  Macro __STARTUP_COPY_MULTIPLE is used to choose between two schemes.  */
 
-  for( ; fptr > eptr ; ){
-      *fptr = 0xFFFFFFFF;
-      fptr -= 0x1;    
-  }
 
 #ifdef __STARTUP_COPY_MULTIPLE
 /*  Multiple sections scheme.

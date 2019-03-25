@@ -84,7 +84,7 @@ void Reset_Handler(void);                            /* Reset Handler */
   User Initial Stack & Heap
  *----------------------------------------------------------------------------*/
 #ifndef __STACK_SIZE
-  #define   __STACK_SIZE  0x00005000
+  #define   __STACK_SIZE  0x00000A00
 #endif
 static uint8_t stack[__STACK_SIZE] __attribute__ ((aligned(8), used, section(".stack")));
 
@@ -235,11 +235,19 @@ void Reset_Handler(void) {
   uint32_t *pSrc, *pDest;
   uint32_t *pTable __attribute__((unused));
 
+  uint32_t *fptr = (uint32_t*)0x20007fe0;
+  uint32_t *eptr = (uint32_t*)0x20000000;
+  
+  for( ; fptr > eptr ; ){
+      *fptr = 0xFFFFFFFF;
+      fptr -= 0x1;    
+  }
 /*  Firstly it copies data from read only memory to RAM. There are two schemes
  *  to copy. One can copy more than one sections. Another can only copy
  *  one section.  The former scheme needs more instructions and read-only
  *  data to implement than the latter.
  *  Macro __STARTUP_COPY_MULTIPLE is used to choose between two schemes.  */
+
 
 #ifdef __STARTUP_COPY_MULTIPLE
 /*  Multiple sections scheme.
@@ -330,15 +338,16 @@ void Reset_Handler(void) {
 #endif
 
   /* Extract random seed */
-  uint32_t* pSeed_start = &__bss_end__;
-  uint32_t* pSeed_end   = (&__bss_end__) + 32;
-   
+  //uint32_t* pSeed_start = &__bss_end__;
+  //uint32_t* pSeed_end   = (&__bss_end__) + 32;
+  /* 
   for(; pSeed_start < pSeed_end ; ){
       __SRAM_seed ^= *pSeed_start;
       pSeed_start += 0x4;    
   } 
-
+  */
   /* Initialize stack to known value to measure stack usage */  
+  /* 
   pSeed_start = &__bss_end__;
   pSeed_end   = (&__bss_end__) + 5000;
   
@@ -346,7 +355,7 @@ void Reset_Handler(void) {
       *pSeed_start = 0xFFFFFFFF;
       pSeed_start += 0x1;    
   }
-   
+  */
   __START();
 }
 
