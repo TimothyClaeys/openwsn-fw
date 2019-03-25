@@ -38,7 +38,7 @@
 \warning Do not pick a number greater than 255, since its filling level is
          encoded by a single byte in the code.
 */
-#define SERIAL_INPUT_BUFFER_SIZE  200
+#define SERIAL_INPUT_BUFFER_SIZE  255
 
 /// Modes of the openserial module.
 enum {

@@ -387,16 +387,19 @@ void openserial_startOutput(void) {
     openserial_vars.debugPrintCounter = (openserial_vars.debugPrintCounter+1)%STATUS_MAX;
     debugPrintCounter = openserial_vars.debugPrintCounter;
     ENABLE_INTERRUPTS();
-
+	
     switch (debugPrintCounter) {
+	/*
         case STATUS_ISSYNC:
             if (debugPrint_isSync()==TRUE) {
                 break;
             }
+	*/
         case STATUS_ID:
             if (debugPrint_id()==TRUE) {
                break;
             }
+	/*
         case STATUS_DAGRANK:
             if (debugPrint_myDAGrank()==TRUE) {
                 break;
@@ -437,9 +440,10 @@ void openserial_startOutput(void) {
             if (debugPrint_joined()==TRUE) {
                 break;
             }
+	*/
         default:
             DISABLE_INTERRUPTS();
-            openserial_vars.debugPrintCounter=0;
+            //openserial_vars.debugPrintCounter=0;
             ENABLE_INTERRUPTS();
     }
 
@@ -1036,6 +1040,7 @@ void isr_openserial_rx(void) {
                 (errorparameter_t)0
             );
         }
+		//openserial_printError(COMPONENT_OPENSERIAL, ERR_DEBUG, openserial_vars.inputBufFill, 0);
 
         openserial_vars.busyReceiving      = FALSE;
         openserial_stop();
