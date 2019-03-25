@@ -10,14 +10,15 @@
 */
 
 #include "opendefs.h"
+#include "openqueue.h"
 
 //=========================== define ==========================================
 
 #define DISPATCH_FRAG_FIRST     24
 #define DISPATCH_FRAG_SUBSEQ    28
 
-#define FRAGMENT_BUFFER         12
-#define REASSEMBLE_BUFFER       12
+#define FRAGMENT_BUFFER         QUEUELENGTH
+#define REASSEMBLE_BUFFER       QUEUELENGTH
 
 #define MAX_FRAGMENT_SIZE       96
 #define DEFAULT_TAG_VALUE       0xFFFFFFFF
