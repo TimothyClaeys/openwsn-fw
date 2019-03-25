@@ -38,6 +38,7 @@ dummyFunc = Builder(
     action = '',
     suffix = '.ihex',
 )
+
 if env['panid']:
     env.Append(CPPDEFINES    = {'PANID_DEFINED' : env['panid']})
 if env['dagroot']==1:
@@ -57,9 +58,15 @@ if env['deadline_option']==1:
 if env['tls']==1:
     env.Append(CPPDEFINES    = 'TLS_ENABLED')
 if env['dtls']==1:
-	env.Append(CPPDEFINES    = 'DTLS_ENABLED')
+    env.Append(CPPDEFINES    = 'DTLS_ENABLED')
 if env['hw_crypto']==1:
-	env.Append(CPPDEFINES    = 'HW_CRYPTO')
+    env.Append(CPPDEFINES    = 'HW_CRYPTO')
+if env['client']==1:
+    env.Append(CPPDEFINES    = 'CLIENT_APP')
+if env['server']==1:
+    env.Append(CPPDEFINES    = 'SERVER_APP')
+if env['tcphc']==1:
+    env.Append(CPPDEFINES    = 'LOWPAN_TCPHC')
 
 if env['toolchain']=='mspgcc':
     
@@ -219,7 +226,7 @@ elif env['toolchain']=='armgcc':
         
         # compiler (C)
         env.Replace(CC           = 'arm-none-eabi-gcc')
-        env.Append(CCFLAGS       = '-Os')
+        env.Append(CCFLAGS       = '-O0')
         env.Append(CCFLAGS       = '-Wall')
         env.Append(CCFLAGS       = '-fstack-usage')
         env.Append(CCFLAGS       = '-Wa,-adhlns=${TARGET.base}.lst')
@@ -240,7 +247,7 @@ elif env['toolchain']=='armgcc':
      
         # linker
         env.Append(LINKFLAGS     = '-Tbsp/boards/'+env['board']+'/' + linker_file)
-        env.Append(LINKFLAGS     = '-nostartfiles')
+        env.Append(LINKFLAGS     = '-nostartfiles -lm')
         env.Append(LINKFLAGS     = '--specs=nosys.specs')
         env.Append(LINKFLAGS     = '--specs=nano.specs')
         env.Append(LINKFLAGS     = '-Wl,-Map,output.map,--verbose')

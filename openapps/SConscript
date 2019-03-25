@@ -34,7 +34,7 @@ additionalSourceFiles = [
     #os.path.join('opencoap','cborencoder.c'),
     #os.path.join('cjoin','cojp_cbor.c'),
     #os.path.join('uecho','uecho.c'),
-    #os.path.join('techo','techo.c'),
+    os.path.join('techo','techo.c'),
 ]
 
 # header files that should be included in the build other than
@@ -45,24 +45,30 @@ additionalHeaderFiles = [
     #os.path.join('opencoap','cborencoder.h'),
     #os.path.join('cjoin','cojp_cbor.h'),
     #os.path.join('uecho','uecho.h'),
-    #os.path.join('techo','techo.h'),
+    os.path.join('techo','techo.h'),
 ]
 
-if localEnv['tls'] == 1:
-	additionalSourceFiles.append(os.path.join('s_techo','s_techo.h'))
+if localEnv['tls'] == 1 and localEnv['client'] == 1:
+	additionalSourceFiles.append(os.path.join('s_techo','s_techo.c'))
 	additionalHeaderFiles.append(os.path.join('s_techo','s_techo.h'))
 
-if localEnv['dtls'] == 1:
-	additionalSourceFiles.append(os.path.join('s_uecho','s_uecho.h'))
+if localEnv['tls'] == 1 and localEnv['server'] == 1:
+	additionalSourceFiles.append(os.path.join('techo_srv','techo_srv.c'))
+	additionalHeaderFiles.append(os.path.join('techo_srv','techo_srv.h'))
+
+if localEnv['dtls'] == 1 and localEnv['client'] == 1:
+	additionalSourceFiles.append(os.path.join('s_uecho','s_uecho.c'))
 	additionalHeaderFiles.append(os.path.join('s_uecho','s_uecho.h'))
 
 # additional apps the user wants to build
 if localEnv['apps']:
     userApps  = localEnv['apps'].split(',')
 else:
-    if localEnv['tls'] == 1:
+    if localEnv['tls'] and localEnv['client'] == 1:
         userApps  = ['s_techo']
-    elif localEnv['dtls'] == 1:
+    elif localEnv['tls'] and localEnv['server'] == 1:
+        userApps  = ['techo_srv']
+    elif localEnv['dtls'] and localEnv['client'] == 1:
         userApps  = ['s_uecho']
     else:
         userApps = []

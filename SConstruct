@@ -145,6 +145,9 @@ command_line_options = {
     'tls':              		['0','1'],
     'msf_adapting_to_traffic':  ['0','1'],
     'dtls':             		['0','1'],
+    'tcphc':             		['0','1'],
+	'client':					['0','1'],
+	'server':					['0','1'],
     'hw_crypto':        		['0','1'],
     'ide':              		['none','qtcreator'],
     'revision':         		['']
@@ -190,7 +193,7 @@ command_line_vars.AddVariables(
     (
         'msf_adapting_to_traffic',                         # key
         '',                                                # help
-        command_line_options['msf_adapting_to_traffic'][1],# default
+        command_line_options['msf_adapting_to_traffic'][0],# default
         validate_option,                                   # validator
         int,                                               # converter
     ),
@@ -324,6 +327,27 @@ command_line_vars.AddVariables(
         'dtls',		                                       # key
         '',                                                # help
         command_line_options['dtls'][0],                   # default
+        validate_option,                                   # validator
+        int,                                               # converter
+    ),
+    (
+        'tcphc',		                                   # key
+        '',                                                # help
+        command_line_options['tcphc'][0],                  # default
+        validate_option,                                   # validator
+        int,                                               # converter
+    ),
+    (
+        'client',		                                   # key
+        '',                                                # help
+        command_line_options['client'][0],                 # default
+        validate_option,                                   # validator
+        int,                                               # converter
+    ),
+    (
+        'server',		                                   # key
+        '',                                                # help
+        command_line_options['server'][0],                 # default
         validate_option,                                   # validator
         int,                                               # converter
     ),
