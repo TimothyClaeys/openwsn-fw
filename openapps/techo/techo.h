@@ -9,7 +9,6 @@
 */
 
 #include "opentimers.h"
-#include "scheduler.h"
 #include "opentcp.h"
 #include "opendefs.h"
 #include "IEEE802154E.h"
@@ -40,7 +39,7 @@ typedef struct {
 	uint16_t			 statePeriod; 
 	uint8_t				 state; 
 	tcp_resource_desc_t  desc;  ///< resource descriptor for this module, used to register at UDP stack 
-	bool				 echoed;
+	bool				 sendDone;
 } techo_vars_t; 
 
 

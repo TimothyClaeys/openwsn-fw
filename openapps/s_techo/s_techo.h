@@ -22,8 +22,8 @@
 
 //=========================== define ==========================================
 
-#define S_TECHO_CONNECT_PERIOD     15000
-#define S_TECHO_PERIOD              3000
+#define S_TECHO_CONNECT_PERIOD      15000
+#define S_TECHO_PERIOD              5000
 
 //=========================== typedef =========================================
 
