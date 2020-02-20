@@ -11,6 +11,7 @@
 #include "openudp.h"
 #include "debugpins.h"
 #include "scheduler.h"
+#include "opentcp.h"
 
 //=========================== variables =======================================
 
@@ -249,6 +250,9 @@ void forwarding_sendDone(OpenQueueEntry_t *msg, owerror_t error) {
             case IANA_UDP:
                 openudp_sendDone(msg, error);
                 break;
+            case IANA_TCP:
+                opentcp_sendDone(msg, error);
+                break;
             case IANA_ICMPv6:
                 icmpv6_sendDone(msg, error);
                 break;
@@ -318,6 +322,9 @@ void forwarding_receive(
         switch (msg->l4_protocol) {
             case IANA_UDP:
                 openudp_receive(msg);
+                break;
+            case IANA_TCP:
+                opentcp_receive(msg);
                 break;
             case IANA_ICMPv6:
                 icmpv6_receive(msg);

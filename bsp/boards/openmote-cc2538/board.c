@@ -42,7 +42,6 @@
 //=========================== prototypes ======================================
 
 void board_timer_init(void);
-uint32_t board_timer_get(void);
 bool board_timer_expired(uint32_t future);
 
 static void clock_init(void);

@@ -70,6 +70,7 @@ enum {
 enum {
    IANA_IPv6HOPOPT                     = 0x00,
    IANA_UDP                            = 0x11,
+   IANA_TCP                            = 0x06,
    IANA_IPv6ROUTING                    = 0x03,
    IANA_IPv6ROUTE                      = 0x2b,//used for source routing
    IANA_ICMPv6                         = 0x3a,
@@ -157,26 +158,27 @@ enum {
    COMPONENT_ICMPv6RPL                 = 0x17,
    //TRAN
    COMPONENT_OPENUDP                   = 0x18,
-   COMPONENT_OPENCOAP                  = 0x19,
+   COMPONENT_OPENTCP                   = 0x19,
+   COMPONENT_OPENCOAP                  = 0x1a,
    // secure join
-   COMPONENT_CJOIN                     = 0x1a,
-   COMPONENT_OPENOSCOAP                = 0x1b,
+   COMPONENT_CJOIN                     = 0x1b,
+   COMPONENT_OPENOSCOAP                = 0x1c,
    // applications
-   COMPONENT_C6T                       = 0x1c,
-   COMPONENT_CEXAMPLE                  = 0x1d,
-   COMPONENT_CINFO                     = 0x1e,
-   COMPONENT_CLEDS                     = 0x1f,
-   COMPONENT_CSENSORS                  = 0x20,
-   COMPONENT_CSTORM                    = 0x21,
-   COMPONENT_CWELLKNOWN                = 0x22,
-   COMPONENT_UECHO                     = 0x23,
-   COMPONENT_UINJECT                   = 0x24,
-   COMPONENT_RRT                       = 0x25,
-   COMPONENT_SECURITY                  = 0x26,
-   COMPONENT_USERIALBRIDGE             = 0x27,
-   COMPONENT_UEXPIRATION               = 0x28,
-   COMPONENT_UMONITOR                  = 0x29,
-   COMPONENT_CINFRARED                 = 0x2a,
+   COMPONENT_C6T                       = 0x1d,
+   COMPONENT_CEXAMPLE                  = 0x1e,
+   COMPONENT_CINFO                     = 0x1f,
+   COMPONENT_CLEDS                     = 0x20,
+   COMPONENT_CSENSORS                  = 0x21,
+   COMPONENT_CSTORM                    = 0x22,
+   COMPONENT_CWELLKNOWN                = 0x23,
+   COMPONENT_UECHO                     = 0x24,
+   COMPONENT_UINJECT                   = 0x25,
+   COMPONENT_RRT                       = 0x26,
+   COMPONENT_SECURITY                  = 0x27,
+   COMPONENT_USERIALBRIDGE             = 0x28,
+   COMPONENT_UEXPIRATION               = 0x29,
+   COMPONENT_UMONITOR                  = 0x2a,
+   COMPONENT_CINFRARED                 = 0x2b,
 };
 
 /**
@@ -198,6 +200,20 @@ enum {
    ERR_WRONG_TRAN_PROTOCOL             = 0x07, // unknown transport protocol {0} (code location {1})
    ERR_UNSUPPORTED_PORT_NUMBER         = 0x08, // unsupported port number {0} (code location {1})
    ERR_INVALID_CHECKSUM                = 0x09, // invalid checksum, expected 0x{:04x}, found 0x{:04x}
+   ERR_WRONG_TCP_STATE                 = 0x0a, // wrong TCP state {0} (location {1})
+   ERR_TCP_CONNECTING                  = 0x0b, // TCP connecting to port {0}
+   ERR_TCP_SEND                        = 0x0c, // TCP sending {0} bytes (in flight {1})
+   ERR_TCP_TX_BUF_FULL                 = 0x0d, // TCP transmission buffer full, written {0}
+   ERR_TCP_CONN_ESTABLISHED            = 0x0e, // TCP connection established with port {0}
+   ERR_TCP_INVALID_HDR                 = 0x0f, // invalid TCP header
+   ERR_TCP_RESET                       = 0x10, // TCP state machine reset (in state {0}, location {1})
+   ERR_TCP_CLOSED                      = 0x11, // TCP connection closed
+   ERR_TCP_LAYER_PUSH_FAILED           = 0x12, // TCP failed to push to lower layer
+   ERR_TCP_RETRANSMISSION              = 0x13, // TCP retransmission (seqn: {0}, rto: {1})
+   ERR_TCP_TOO_MANY_OPTIONS            = 0x14, // too many TCP options (option size: {0})
+   ERR_NO_MORE_SGMTS                   = 0x15, // receive buffer ran out of segments
+   ERR_GOT_ACK                         = 0x16, // received an ack
+   ERR_TCP_PARSING_SACKS                   = 0x17, // parsing sack block L-edge {0}, R-edge {1}
    // l3
    ERR_RCVD_ECHO_REQUEST               = 0x0a, // received an echo request
    ERR_RCVD_ECHO_REPLY                 = 0x0b, // received an echo reply
@@ -335,6 +351,9 @@ typedef struct {
    uint16_t      l4_destination_port;                           // l4 destination port
    uint8_t*      l4_payload;                                    // pointer to the start of the payload of l4 (used for retransmits)
    uint8_t       l4_length;                                     // length of the payload of l4 (used for retransmits)
+   uint8_t       l4_retransmits;
+   uint16_t      l4_pld_length;
+   uint16_t      l4_hdr_length;
    //l3
    open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack)
    open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address
