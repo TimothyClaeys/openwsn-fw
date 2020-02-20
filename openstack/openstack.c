@@ -39,6 +39,7 @@
 //===== application-layer
 #include "openweb.h"
 
+#include "opentcp.h"
 //===== applications
 #include "openapps.h"
 
@@ -67,6 +68,7 @@ void openstack_init(void) {
 #if defined(OPENWSN_ADAPTIVE_SYNC_C)
     adaptive_sync_init();
 #endif
+   opentcp_init();
 
     ieee154e_init();
     //-- 02b-RES

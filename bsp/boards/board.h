@@ -31,6 +31,7 @@ typedef enum {
 void board_init(void);
 void board_sleep(void);
 void board_reset(void);
+uint32_t board_timer_get(void);
 
 /**
 \}

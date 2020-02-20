@@ -76,6 +76,7 @@ enum {
 enum {
    IANA_IPv6HOPOPT                     = 0x00,
    IANA_UDP                            = 0x11,
+   IANA_TCP                            = 0x06,
    IANA_IPv6ROUTING                    = 0x03,
    IANA_IPv6ROUTE                      = 0x2b,//used for source routing
    IANA_ICMPv6                         = 0x3a,
@@ -164,7 +165,8 @@ enum {
    COMPONENT_ICMPv6ROUTER              = 0x17,
    COMPONENT_ICMPv6RPL                 = 0x18,
    //TRAN
-   COMPONENT_OPENUDP                   = 0x19,
+   COMPONENT_OPENUDP                   = 0x18,
+   COMPONENT_OPENTCP                   = 0x19,
    COMPONENT_OPENCOAP                  = 0x1a,
    // secure join
    COMPONENT_CJOIN                     = 0x1b,
@@ -349,7 +351,9 @@ typedef struct {
    uint16_t      l4_destination_port;                           // l4 destination port
    uint8_t*      l4_payload;                                    // pointer to the start of the payload of l4 (used for retransmits)
    uint8_t       l4_length;                                     // length of the payload of l4 (used for retransmits)
-
+   uint8_t       l4_retransmits;
+   uint16_t      l4_pld_length;
+   uint16_t      l4_hdr_length;
    //l3
    open_addr_t   l3_destinationAdd;                             // 128b IPv6 destination (down stack)
    open_addr_t   l3_sourceAdd;                                  // 128b IPv6 source address

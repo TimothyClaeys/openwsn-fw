@@ -27,6 +27,7 @@ typedef enum {
     TASKPRIO_COAP = 0x09,
     TASKPRIO_ADAPTIVE_SYNC = 0x0a,
     TASKPRIO_MSF = 0x0b,
+    TASKPRIO_TCP                   = 0x09,
     // tasks trigger by other interrupts
     TASKPRIO_BUTTON = 0x0c,
     TASKPRIO_SIXTOP_TIMEOUT = 0x0d,
