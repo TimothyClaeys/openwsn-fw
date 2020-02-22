@@ -20,6 +20,7 @@ if localEnv['board']=='python':
         'uexpiration_monitor',
         'rrt',
         'cexample',
+        'techo_client',
         'cstorm',
     ]
 

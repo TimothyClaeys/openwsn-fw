@@ -20,7 +20,8 @@
 #include "userialbridge.h"
 #include "uexpiration.h"
 #include "uexpiration_monitor.h"
-
+//TCP
+#include "techo_client.h"
 //=========================== variables =======================================
 
 //=========================== prototypes ======================================
@@ -47,4 +48,6 @@ void openapps_init(void) {
    //userialbridge_init();
    //uexpiration_init();
    //umonitor_init();
+
+   //techo_client_init();
 }

@@ -43,6 +43,7 @@
 #include "rrt_obj.h"
 #include "uecho_obj.h"
 #include "uinject_obj.h"
+#include "techo_client_obj.h"
 #include "userialbridge_obj.h"
 
 //=========================== prototypes ======================================
@@ -236,11 +237,11 @@ struct OpenMote {
    cstorm_vars_t        cstorm_vars;
    cwellknown_vars_t    cwellknown_vars;
    rrt_vars_t           rrt_vars;
-   //tohlone_vars_t       tohlone_vars;
    cjoin_vars_t         cjoin_vars;
    uecho_vars_t         uecho_vars;
    uinject_vars_t       uinject_vars;
    userialbridge_vars_t userialbridge_vars;
+   techo_client_vars_t  techo_client_vars;
 };
 
 #endif
