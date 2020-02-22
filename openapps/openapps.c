@@ -46,12 +46,8 @@
 
 #if defined(OPENWSN_UEXP_MONITOR_C)
 #include "uexpiration_monitor.h"
-#endif
-
-#if defined(OPENWSN_CJOIN_C)
-#include "cjoin.h"
-#endif
-
+//TCP
+#include "techo_client.h"
 //=========================== variables =======================================
 
 //=========================== prototypes ======================================
