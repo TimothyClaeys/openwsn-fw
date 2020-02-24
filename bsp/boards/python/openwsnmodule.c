@@ -53,6 +53,7 @@ static PyObject* OpenMote_getState(OpenMote* self) {
    PyObject* icmpv6echo_vars;
    PyObject* icmpv6rpl_vars;
    PyObject* opencoap_vars;
+   PyObject* opentcp_vars;
    PyObject* monitor_expiration_vars;
    PyObject* frag_vars;
    PyObject* neighbors_vars;
@@ -84,7 +85,12 @@ static PyObject* OpenMote_getState(OpenMote* self) {
    PyDict_SetItemString(returnVal, "radio_icb_endFrame_cb", radio_icb_endFrame_cb   );
    sctimer_icb_compare_cb         = PyInt_FromLong((intptr_t)self->sctimer_icb.compare_cb);
    PyDict_SetItemString(returnVal, "sctimer_icb_compare_cb", sctimer_icb_compare_cb);
-   
+
+   // opentcp_vars
+   opentcp_vars = PyDict_New();
+   // TODO
+   PyDict_SetItemString(returnVal, "opentcp_vars", opentcp_vars);
+
    // icmpv6echo_vars
    icmpv6echo_vars = PyDict_New();
    // TODO

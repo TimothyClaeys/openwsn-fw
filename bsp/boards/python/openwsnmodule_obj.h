@@ -202,6 +202,7 @@ struct OpenMote {
    icmpv6echo_vars_t    icmpv6echo_vars;
    icmpv6rpl_vars_t     icmpv6rpl_vars;
    openudp_vars_t       openudp_vars;
+   opentcp_vars_t       opentcp_vars;
    // l3
    monitor_expiration_vars_t        monitor_expiration_vars;
    frag_vars_t          frag_vars;
