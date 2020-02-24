@@ -197,6 +197,7 @@ typedef struct {
 \brief Memory footprint of an OpenMote instance.
 */
 struct OpenMote {
+   opentcp_vars_t       opentcp_vars;
     PyObject_HEAD
     //===== callbacks to Python
     PyObject*            callback[MOTE_NOTIF_LAST];

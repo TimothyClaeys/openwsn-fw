@@ -36,6 +36,7 @@
 #define RECV_WND_SIZE           (1792)
 #define SEND_BUF_SIZE           (1024)
 #define NUM_OF_SGMTS            5
+#define CONCURRENT_TCP_TIMERS   10
 
 enum TCP_RECV_BUFFER_enums {
     TCP_RECVBUF_FAIL = -1,
@@ -156,9 +157,6 @@ typedef struct {
     uint16_t urgent_pointer;
 } tcp_ht;
 
-typedef void (*tcp_callbackClosed_cbt)(void);
-
-
 // received segment descriptor
 typedef struct rx_sgmt_t {
     uint8_t *ptr;
@@ -240,10 +238,10 @@ typedef struct {
 
     // TCP timers
     opentimers_id_t stateTimer;
+    opentimers_id_t txTimer;
 #ifdef DELAYED_ACK
     opentimers_id_t dAckTimer;
 #endif
-    opentimers_id_t txTimer;
 
 #ifdef DELAYED_ACK
     // Delayed Acks
@@ -260,13 +258,25 @@ END_PACK
 BEGIN_PACK
 typedef struct tcp_socket {
     uint8_t socket_id;
-    tcp_callbackClosed_cbt callbackClosedSocket;
     tcb_t tcb_vars;
     struct tcp_socket *next;
 } tcp_socket_t;
 END_PACK
 
-tcp_socket_t* tcp_socket_list;
+BEGIN_PACK
+typedef struct tcp_timer {
+    opentimers_id_t id;
+    tcp_socket_t *sock;
+} tcp_timer_t;
+END_PACK
+
+BEGIN_PACK
+typedef struct {
+    tcp_socket_t *tcp_socket_list;
+    tcp_timer_t timer_list[CONCURRENT_TCP_TIMERS];
+} opentcp_vars_t;
+
+END_PACK
 
 //=========================== prototypes ======================================
 

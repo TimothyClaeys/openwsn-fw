@@ -18,18 +18,14 @@
 
 #define SEQN(bufpos) packetfunctions_ntohl((uint8_t *) &(((tcp_ht *)((bufpos).segment->l4_payload))->sequence_number))
 
-#define TCP_STATE_CHANGE(socket_vars, new_state)        \
-    (socket_vars).state = new_state;                    \
-    opentimers_cancel((socket_vars).stateTimer);        \
-    opentimers_scheduleAbsolute(                        \
-        (socket_vars).stateTimer,                       \
-        TCP_TIMEOUT,                                    \
-        opentimers_getValue(),                          \
-        TIME_MS,                                        \
-        tcp_timer_cb)                                   \
+#define TCP_STATE_CHANGE(sock, new_state)                           \
+    (sock)->tcb_vars.state = new_state;                             \
+    tcp_rm_timer((sock)->tcb_vars.stateTimer, FALSE);               \
+    tcp_add_timer((sock), (sock)->tcb_vars.stateTimer, TCP_TIMEOUT) \
 
-//=========================== constants =======================================
+//=========================== typedefs =======================================
 
+opentcp_vars_t opentcp_vars;
 
 //=========================== constants =======================================
 
@@ -60,7 +56,7 @@ void tcp_rm_from_send_buffer(tcp_socket_t *sock, OpenQueueEntry_t *segment);
 
 void tcp_timer_cb(opentimers_id_t id);
 
-void tcp_state_timeout(void);
+void tcp_state_timeout(tcp_socket_t *sock);
 
 uint16_t tcp_calc_wnd_size(tcp_socket_t *sock);
 
@@ -69,8 +65,6 @@ void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t *so
 void tcp_parse_sack_blocks(tcp_socket_t *sock, uint8_t *sack_block, uint8_t len);
 
 void tcp_send_ack_now(tcp_socket_t *sock);
-
-void tcp_send_ack_delayed(void);
 
 uint32_t tcp_schedule_rto(tcp_socket_t *sock, tx_sgmt_t *sgmt);
 
@@ -88,7 +82,7 @@ bool tcp_check_flags(OpenQueueEntry_t *segment, uint8_t ack, uint8_t rst, uint8_
 
 owerror_t tcp_parse_header(tcp_socket_t *sock, OpenQueueEntry_t *segment);
 
-void tcp_retransmission(void);
+void tcp_retransmission(tcp_socket_t *sock);
 
 void tcp_transmit(void);
 
@@ -98,16 +92,20 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock);
 
 void tcp_rcv_buf_merge(tcp_socket_t *sock);
 
-void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t* sgmt);
+void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t *sgmt);
 
 void tcp_free_desc(rx_sgmt_t *desc);
 
 void tcp_send_rst(OpenQueueEntry_t *segment);
 
+owerror_t tcp_add_timer(tcp_socket_t *sock, opentimers_id_t timer_id, uint32_t timeout);
+
+owerror_t tcp_rm_timer(opentimers_id_t timer_id, bool destroy);
+
 //=========================== public ==========================================
 
 void opentcp_init() {
-    tcp_socket_list = NULL;
+    memset(&opentcp_vars, 0, sizeof(opentcp_vars_t));
 }
 
 owerror_t opentcp_register(tcp_socket_t *sock) {
@@ -115,11 +113,6 @@ owerror_t opentcp_register(tcp_socket_t *sock) {
     memset(&(sock->tcb_vars), 0, sizeof(tcb_t));
 
     sock->socket_id = socket_base_id++;
-
-    // verify if all callbacks are set
-    if (sock->callbackClosedSocket == NULL) {
-        return E_FAIL;
-    }
 
     // prepare TCP control block
     sock->tcb_vars.rto = TCP_RTO_MIN;
@@ -134,17 +127,17 @@ owerror_t opentcp_register(tcp_socket_t *sock) {
     sock->tcb_vars.txTimer = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_TCP);
 
     // prepend to linked list
-    sock->next = tcp_socket_list; // (at first resources is null)
-    tcp_socket_list = sock;
+    sock->next = opentcp_vars.tcp_socket_list; // (at first resources is null)
+    opentcp_vars.tcp_socket_list = sock;
 
     return E_SUCCESS;
 }
 
 owerror_t opentcp_unregister(tcp_socket_t *sock) {
     // delete application
-    tcp_socket_t * previous;
-    tcp_socket_t * current;
-    current = tcp_socket_list;
+    tcp_socket_t *previous;
+    tcp_socket_t *current;
+    current = opentcp_vars.tcp_socket_list;
     previous = NULL;
 
     while (current != sock && current != NULL) {
@@ -160,7 +153,7 @@ owerror_t opentcp_unregister(tcp_socket_t *sock) {
         previous->next = current->next;
         memset(current, 0, sizeof(tcp_socket_t));
     } else {
-        tcp_socket_list = current->next;
+        opentcp_vars.tcp_socket_list = current->next;
         memset(current, 0, sizeof(tcp_socket_t));
     }
 
@@ -169,10 +162,10 @@ owerror_t opentcp_unregister(tcp_socket_t *sock) {
 
 owerror_t opentcp_listen(tcp_socket_t *sock, uint16_t myPort) {
     if (sock->tcb_vars.state == TCP_STATE_CLOSED) {
-        TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_LISTEN);
+        TCP_STATE_CHANGE(sock, TCP_STATE_LISTEN);
 
         // no timeout on listen phase
-        opentimers_cancel(sock->tcb_vars.stateTimer);
+        tcp_rm_timer(sock->tcb_vars.stateTimer, FALSE);
 
         sock->tcb_vars.myPort = myPort;
         return E_SUCCESS;
@@ -205,12 +198,7 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
     optsize = tcp_calc_optsize(sock, options);
 
     // start the state machine timer (tcp timeout if state machine gets stuck)
-    opentimers_scheduleAbsolute(
-            sock->tcb_vars.stateTimer,
-            TCP_TIMEOUT,
-            opentimers_getValue(),
-            TIME_MS,
-            tcp_timer_cb);
+    tcp_add_timer(sock, sock->tcb_vars.stateTimer, TCP_TIMEOUT);
 
     sock->tcb_vars.rtt = ((float) board_timer_get()) / 1000;
     sock->tcb_vars.isRTTRunning = TRUE;
@@ -247,7 +235,7 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
     syn_pkt->segment->l4_payload = syn_pkt->segment->payload;
 
     openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CONNECTING, (errorparameter_t) sock->tcb_vars.hisPort, 0);
-    TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_SYN_SENT);
+    TCP_STATE_CHANGE(sock, TCP_STATE_SYN_SENT);
 
     LOCK(syn_pkt);
     if (forwarding_send(syn_pkt->segment) == E_FAIL) {
@@ -366,7 +354,7 @@ int opentcp_send(tcp_socket_t *sock, const unsigned char *message, uint16_t size
     }
 
     // reschedule state machine timer (prevent TCP timeout)
-    TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ESTABLISHED);
+    TCP_STATE_CHANGE(sock, TCP_STATE_ESTABLISHED);
 
     // find next write location in sendBuffer
     uint32_t offset;
@@ -412,7 +400,6 @@ int opentcp_send(tcp_socket_t *sock, const unsigned char *message, uint16_t size
     }
 
     if (sock->tcb_vars.sendBuffer.len > 0) {
-        sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
         scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
     }
 
@@ -424,7 +411,7 @@ int opentcp_send(tcp_socket_t *sock, const unsigned char *message, uint16_t size
 
 void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
     tx_sgmt_t *tempPkt;
-    tcp_socket_t * sock;
+    tcp_socket_t *sock;
 
     if (segment == NULL || segment->l4_payload == NULL) {
         board_reset();
@@ -468,12 +455,12 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
                 }
             }
 
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_SYN_RECEIVED);
+            TCP_STATE_CHANGE(sock, TCP_STATE_SYN_RECEIVED);
             break;
 
         case TCP_STATE_ALMOST_ESTABLISHED:                          // [sendDone] establishment: just tried to send a tcp ack, after I got a synack
             openqueue_freePacketBuffer(segment);
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ESTABLISHED);
+            TCP_STATE_CHANGE(sock, TCP_STATE_ESTABLISHED);
             openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CONN_ESTABLISHED,
                                  (errorparameter_t) sock->tcb_vars.hisPort, 0);
             break;
@@ -496,7 +483,7 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
                 openqueue_freePacketBuffer(segment);
             }
 
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ESTABLISHED);
+            TCP_STATE_CHANGE(sock, TCP_STATE_ESTABLISHED);
             break;
         case TCP_STATE_ALMOST_FIN_WAIT_1:                           //[sendDone] teardown
             // I just send a FIN [+ACK]
@@ -508,24 +495,24 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
                 }
             }
 
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_FIN_WAIT_1);
+            TCP_STATE_CHANGE(sock, TCP_STATE_FIN_WAIT_1);
             break;
 
         case TCP_STATE_ALMOST_CLOSING:                              //[sendDone] teardown
             tcp_rm_from_send_buffer(sock, segment);
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_CLOSING);
+            TCP_STATE_CHANGE(sock, TCP_STATE_CLOSING);
             break;
 
         case TCP_STATE_ALMOST_TIME_WAIT:                            //[sendDone] teardown
             openqueue_freePacketBuffer(segment);
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_TIME_WAIT);
+            TCP_STATE_CHANGE(sock, TCP_STATE_TIME_WAIT);
             //TODO implement waiting timer
             break;
 
         case TCP_STATE_ALMOST_CLOSE_WAIT:                           //[sendDone] teardown
             // remove the ack segment
             openqueue_freePacketBuffer(segment);
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_CLOSE_WAIT);
+            TCP_STATE_CHANGE(sock, TCP_STATE_CLOSE_WAIT);
 
             //I send FIN+ACK
             tempPkt = NULL;
@@ -552,7 +539,7 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
                 return;
             }
 
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_LAST_ACK);
+            TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_LAST_ACK);
             break;
 
         case TCP_STATE_ALMOST_LAST_ACK:                             //[sendDone] teardown
@@ -564,7 +551,7 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
                 }
             }
 
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_LAST_ACK);
+            TCP_STATE_CHANGE(sock, TCP_STATE_LAST_ACK);
             break;
 
         default:
@@ -576,7 +563,7 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
 }
 
 void opentcp_receive(OpenQueueEntry_t *segment) {
-    tcp_socket_t * sock;
+    tcp_socket_t *sock;
     tx_sgmt_t *tcp_sgmt;
 
 
@@ -664,7 +651,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
 
                 tcp_sgmt->segment->l4_payload = tcp_sgmt->segment->payload;
 
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_SYN_RECEIVED);
+                TCP_STATE_CHANGE(sock, TCP_STATE_SYN_RECEIVED);
 
                 LOCK(tcp_sgmt);
                 if (forwarding_send(tcp_sgmt->segment) == E_FAIL) {
@@ -707,7 +694,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                 // initialize start value receive buffer
                 sock->tcb_vars.recvBuffer.start_num = sock->tcb_vars.myAckNum;
 
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_ESTABLISHED);
+                TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_ESTABLISHED);
 
                 tcp_send_ack_now(sock);
 
@@ -749,7 +736,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                         TCP_FIN_NO,
                         optsize);
 
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_SYN_RECEIVED);
+                TCP_STATE_CHANGE(sock, TCP_STATE_SYN_RECEIVED);
 
                 LOCK(tcp_sgmt);
                 if (forwarding_send(tcp_sgmt->segment) == E_FAIL) {
@@ -788,7 +775,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
 #endif
 
                 //I receive ACK, the virtual circuit is established
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ESTABLISHED);
+                TCP_STATE_CHANGE(sock, TCP_STATE_ESTABLISHED);
                 openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CONN_ESTABLISHED,
                                      (errorparameter_t) sock->tcb_vars.hisPort, 0);
 
@@ -812,11 +799,11 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                 sock->tcb_vars.mySeqNum = sock->tcb_vars.hisAckNum;
             }
 
-            TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ESTABLISHED);
+            TCP_STATE_CHANGE(sock, TCP_STATE_ESTABLISHED);
 
             if (tcp_check_flags(segment, TCP_ACK_WHATEVER, TCP_RST_NO, TCP_SYN_NO, TCP_FIN_YES)) {
                 //I receive FIN[+ACK], I send ACK
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_CLOSE_WAIT);
+                TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_CLOSE_WAIT);
 
                 // update rto
                 tcp_calc_rto(sock);
@@ -826,7 +813,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                 sock->tcb_vars.myAckNum = sock->tcb_vars.hisSeqNum + 1;
 
 #ifdef DELAYED_ACK
-                opentimers_cancel(sock->tcb_vars.dAckTimer);
+                tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE)
 #endif
                 tcp_send_ack_now(sock);
             }
@@ -843,7 +830,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
 
                 if (ret == TCP_RECVBUF_FAIL) {
 #ifdef DELAYED_ACK
-                    opentimers_cancel(sock->tcb_vars.dAckTimer);
+                    tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE);
 #endif
                     openqueue_freePacketBuffer(segment);
                     tcp_send_ack_now(sock);
@@ -858,34 +845,22 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                         if (sock->tcb_vars.fullMSS < 2) {
                             // only schedule if not already running.
                             if (opentimers_isRunning(sock->tcb_vars.dAckTimer) == FALSE) {
-                                opentimers_scheduleAbsolute(
-                                        sock->tcb_vars.dAckTimer,
-                                        TCP_DELAYED_ACK,
-                                        opentimers_getValue(),
-                                        TIME_MS,
-                                        tcp_timer_cb
-                                );
+                                tcp_add_timer(sock, sock->tcb_vars.dAckTimer, TCP_DELAYED_ACK);
                             }
                         } else {
                             // receiving two full sized segments, send immediate ack
                             sock->tcb_vars.fullMSS = 0;
-                            opentimers_cancel(sock->tcb_vars.dAckTimer);
+                            tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE);
                             tcp_send_ack_now(sock);
                         }
                     } else {
                         sock->tcb_vars.fullMSS = 0;
 #ifdef MIN_MSS_ACK
-                        opentimers_cancel(sock->tcb_vars.dAckTimer);
+                        tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE);
                         tcp_send_ack_now(sock);
 #else
                         if (opentimers_isRunning(sock->tcb_vars.dAckTimer) == FALSE) {
-                            opentimers_scheduleAbsolute(
-                                    sock->tcb_vars.dAckTimer,
-                                    TCP_DELAYED_ACK,
-                                    opentimers_getValue(),
-                                    TIME_MS,
-                                    tcp_timer_cb
-                            );
+                            tcp_add_timer(sock, sock->tcb_vars.dAckTimer, TCP_DELAYED_ACK);
                         }
 #endif
                     }
@@ -907,7 +882,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
 
                 openqueue_freePacketBuffer(segment);
 
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_CLOSING);
+                TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_CLOSING);
 
                 tcp_send_ack_now(sock);
             } else if (tcp_check_flags(segment, TCP_ACK_YES, TCP_RST_NO, TCP_SYN_NO, TCP_FIN_YES)) {
@@ -916,13 +891,13 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                 sock->tcb_vars.myAckNum = sock->tcb_vars.hisSeqNum + 1;
 
                 openqueue_freePacketBuffer(segment);
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_TIME_WAIT);
+                TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_TIME_WAIT);
 
                 tcp_send_ack_now(sock);
             } else if (tcp_check_flags(segment, TCP_ACK_YES, TCP_RST_NO, TCP_SYN_NO, TCP_FIN_NO)) {
                 //I receive ACK, I will receive FIN later
                 openqueue_freePacketBuffer(segment);
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_FIN_WAIT_2);
+                TCP_STATE_CHANGE(sock, TCP_STATE_FIN_WAIT_2);
             } else {
                 opentcp_reset(sock);
                 openserial_printError(COMPONENT_OPENTCP, ERR_TCP_RESET,
@@ -940,7 +915,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                 sock->tcb_vars.myAckNum = sock->tcb_vars.hisSeqNum + 1;
 
                 openqueue_freePacketBuffer(segment);
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_TIME_WAIT);
+                TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_TIME_WAIT);
 
                 tcp_send_ack_now(sock);
             }
@@ -949,7 +924,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
         case TCP_STATE_CLOSING:                                     //[receive] teardown
             if (tcp_check_flags(segment, TCP_ACK_YES, TCP_RST_NO, TCP_SYN_NO, TCP_FIN_NO)) {
                 //I receive ACK, I do nothing
-                TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_TIME_WAIT);
+                TCP_STATE_CHANGE(sock, TCP_STATE_TIME_WAIT);
                 openqueue_freePacketBuffer(segment);
                 openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_CLOSED, 0, 0);
                 //TODO implement waiting timer
@@ -989,7 +964,7 @@ owerror_t opentcp_close(tcp_socket_t *sock) {    //[command] teardown
     tx_sgmt_t *finPkt;
 
 #ifdef DELAYED_ACK
-    opentimers_cancel(sock->tcb_vars.dAckTimer);
+    tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE);
 #endif
 
     if (sock->tcb_vars.sendBuffer.len > 0) {
@@ -1016,7 +991,7 @@ owerror_t opentcp_close(tcp_socket_t *sock) {    //[command] teardown
             0);
 
     sock->tcb_vars.mySeqNum++;
-    TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_ALMOST_FIN_WAIT_1);
+    TCP_STATE_CHANGE(sock, TCP_STATE_ALMOST_FIN_WAIT_1);
 
     LOCK(finPkt);
     if (forwarding_send(finPkt->segment) == E_FAIL) {
@@ -1029,24 +1004,20 @@ owerror_t opentcp_close(tcp_socket_t *sock) {    //[command] teardown
 }
 
 void opentcp_reset(tcp_socket_t *sock) {
-    TCP_STATE_CHANGE(sock->tcb_vars, TCP_STATE_CLOSED);
+    TCP_STATE_CHANGE(sock, TCP_STATE_CLOSED);
 
 #ifdef DELAYED_ACK
-    opentimers_cancel(sock->tcb_vars.dAckTimer);
+    tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE);
 #endif
-    opentimers_cancel(sock->tcb_vars.stateTimer);
+    tcp_rm_timer(sock->tcb_vars.stateTimer, FALSE);
 
     for (uint8_t i = 0; i < NUM_OF_SGMTS; i++) {
         if (sock->tcb_vars.sendBuffer.txDesc[i].segment != NULL) {
-            opentimers_cancel(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
-            opentimers_destroy(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
+            tcp_rm_timer(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer, TRUE);
         }
     }
 
     openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_RESET, (errorparameter_t) 0, (errorparameter_t) 0);
-
-    // Inform application that socket is destroyed
-    // sock->callbackClosedSocket();
 
     openqueue_removeAllCreatedBy(sock->socket_id);
 
@@ -1113,7 +1084,7 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
 #ifdef DELAYED_ACK
         // cancel possible delayed ack timer
         if (opentimers_isRunning(sock->tcb_vars.dAckTimer) == TRUE) {
-            opentimers_cancel(sock->tcb_vars.dAckTimer);
+            tcp_rm_timer(sock->tcb_vars.dAckTimer, FALSE);
         }
 #endif
 
@@ -1195,15 +1166,10 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
         if (no_more_packets) {
             // no more space in openqueue, back off for a while
             sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
-            opentimers_cancel(sock->tcb_vars.txTimer);
-            opentimers_scheduleAbsolute(
-                    sock->tcb_vars.txTimer,
-                    TCP_TX_BACKOFF,
-                    opentimers_getValue(),
-                    TIME_MS,
-                    tcp_timer_cb);
+            tcp_rm_timer(sock->tcb_vars.txTimer, FALSE);
+            tcp_add_timer(sock, sock->tcb_vars.txTimer, TCP_TX_BACKOFF);
         } else {
-            // we still have packets in the openqueue buffer left so immeadiately try again
+            // we still have packets in the openqueue buffer left so immediately try again
             sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
             scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
         }
@@ -1223,25 +1189,8 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
     }
 }
 
-void tcp_state_timeout() {
-    uint8_t mask = 0;
-    tcp_socket_t * sock;
-
-    sock = tcp_socket_list;
-    mask |= (1 << STATE_MACHINE_TIMEOUT);
-
-    while (sock != NULL && (sock->tcb_vars.tcp_timer_flags & mask) == FALSE) {
-        sock = sock->next;
-    }
-
-    sock->tcb_vars.tcp_timer_flags &= (~mask);
-
-    if (sock->callbackClosedSocket != NULL) {
-        //sock->callbackClosedSocket();
-    } else {
-        opentcp_reset(sock);
-    }
-
+void tcp_state_timeout(tcp_socket_t *sock) {
+    opentcp_reset(sock);
 }
 
 //=========================== functions private =========================================
@@ -1433,25 +1382,12 @@ void tcp_send_ack_now(tcp_socket_t *sock) {
     }
 }
 
-void tcp_retransmission() {
-    uint8_t mask = 0;
-    tcp_socket_t * sock = tcp_socket_list;
-
-    mask |= (1 << RTO_TIMEOUT);
-    while (sock != NULL && (sock->tcb_vars.tcp_timer_flags & mask) == FALSE) {
-        sock = sock->next;
-    }
-
-    if (sock == NULL) {
-        return;
-    }
-
+void tcp_retransmission(tcp_socket_t *sock) {
     for (int i = 0; i < NUM_OF_SGMTS; i++) {
         if (sock->tcb_vars.sendBuffer.txDesc[i].expired) {
 
             // schedule a new RTO
-            opentimers_cancel(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
-            opentimers_destroy(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
+            tcp_rm_timer(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer, TRUE);
 
             sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_retransmits++;
             uint32_t next_timeout = tcp_schedule_rto(sock, &sock->tcb_vars.sendBuffer.txDesc[i]);
@@ -1468,14 +1404,11 @@ void tcp_retransmission() {
             LOCK(&sock->tcb_vars.sendBuffer.txDesc[i]);
             if (forwarding_send(sock->tcb_vars.sendBuffer.txDesc[i].segment) == E_FAIL) {
                 UNLOCK(&sock->tcb_vars.sendBuffer.txDesc[i]);
-                opentimers_cancel(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
-                opentimers_destroy(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
+                tcp_rm_timer(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer, TRUE);
                 openserial_printError(COMPONENT_OPENTCP, ERR_TCP_LAYER_PUSH_FAILED, 0, 0);
             }
         }
     }
-
-    sock->tcb_vars.tcp_timer_flags &= (~mask);
 }
 
 uint32_t tcp_schedule_rto(tcp_socket_t *sock, tx_sgmt_t *txtcp) {
@@ -1490,13 +1423,7 @@ uint32_t tcp_schedule_rto(tcp_socket_t *sock, tx_sgmt_t *txtcp) {
     rto = (uint32_t)FMAX(rto, TCP_RTO_MIN);
     rto = (uint32_t)FMIN(rto, TCP_RTO_MAX);
 
-    opentimers_scheduleAbsolute(
-            txtcp->rtoTimer,
-            rto,
-            opentimers_getValue(),
-            TIME_MS,
-            tcp_timer_cb);
-
+    tcp_add_timer(sock, txtcp->rtoTimer, rto);
 
     return rto;
 }
@@ -1899,7 +1826,7 @@ void tcp_rcv_buf_merge(tcp_socket_t *sock) {
 }
 
 
-void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t* sgmt){
+void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t *sgmt) {
     rx_sgmt_t *temp;
 
     if (sock->tcb_vars.recvBuffer.head == NULL) {
@@ -2049,8 +1976,7 @@ void tcp_ack_send_buffer(tcp_socket_t *sock, uint32_t ack_num) {
             if (SEQN(sock->tcb_vars.sendBuffer.txDesc[i]) + len <= ack_num) {
                 openserial_printInfo(COMPONENT_OPENTCP, ERR_GOT_ACK, SEQN(sock->tcb_vars.sendBuffer.txDesc[i]),
                                      ack_num);
-                opentimers_cancel(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
-                opentimers_destroy(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
+                tcp_rm_timer(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer, TRUE);
                 // don't delete packets that are being queued for transmission
                 if (ISUNLOCKED(&sock->tcb_vars.sendBuffer.txDesc[i])) {
                     tcp_rm_from_send_buffer(sock, sock->tcb_vars.sendBuffer.txDesc[i].segment);
@@ -2068,29 +1994,11 @@ void tcp_ack_send_buffer(tcp_socket_t *sock, uint32_t ack_num) {
 #endif
 }
 
-void tcp_send_ack_delayed() {
-    uint8_t mask = 0;
-    tcp_socket_t * sock = tcp_socket_list;
-
-    mask |= (1 << DEL_ACK_TIMEOUT);
-
-    while (sock != NULL && (sock->tcb_vars.tcp_timer_flags & mask) == FALSE) {
-        sock = sock->next;
-    }
-
-    if (sock == NULL) {
-        return;
-    }
-
-    tcp_send_ack_now(sock);
-    sock->tcb_vars.tcp_timer_flags = (~mask);
-}
-
 void tcp_transmit() {
     uint8_t mask = 0;
-    tcp_socket_t * sock;
+    tcp_socket_t *sock;
 
-    sock = tcp_socket_list;
+    sock = opentcp_vars.tcp_socket_list;
     mask |= (1 << TX_RETRY);
 
     while (sock != NULL && (sock->tcb_vars.tcp_timer_flags & mask) == FALSE) {
@@ -2107,40 +2015,37 @@ void tcp_transmit() {
 }
 
 void tcp_timer_cb(opentimers_id_t id) {
-    bool found = FALSE;
-    tcp_socket_t * sock = tcp_socket_list;
-    while (sock != NULL) {
-        if (id == sock->tcb_vars.stateTimer) {
-            sock->tcb_vars.tcp_timer_flags |= (1 << STATE_MACHINE_TIMEOUT);
-            scheduler_push_task(tcp_state_timeout, TASKPRIO_TCP);
-            found = TRUE;
+    uint8_t i;
+    opentimers_id_t timer_id;
+    tcp_socket_t *sock;
+
+    for (i = 0; i < CONCURRENT_TCP_TIMERS; i++) {
+        if (opentcp_vars.timer_list[i].id != 0 && opentimers_isRunning(opentcp_vars.timer_list[i].id)) {
+            sock = opentcp_vars.timer_list[i].sock;
+            timer_id = opentcp_vars.timer_list[i].id;
+
+            if (timer_id == sock->tcb_vars.stateTimer) {
+                tcp_state_timeout(sock);
 #ifdef DELAYED_ACK
-            } else if (id == sock->tcb_vars.dAckTimer) {
-                sock->tcb_vars.tcp_timer_flags |= (1 << DEL_ACK_TIMEOUT);
-                scheduler_push_task(tcp_send_ack_delayed, TASKPRIO_TCP);
-                found = TRUE;
+                } else if (timer_id == sock->tcb_vars.dAckTimer) {
+                    tcp_send_ack_now(sock);
 #endif
-        } else if (id == sock->tcb_vars.txTimer) {
-            sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
-            scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
-            found = TRUE;
-        } else {
-            // retransmission of a packet
-            // mark the expired timers
-            sock->tcb_vars.tcp_timer_flags |= (1 << RTO_TIMEOUT);
-            for (int i = 0; i < NUM_OF_SGMTS; i++) {
-                if (id == sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer) {
-                    sock->tcb_vars.sendBuffer.txDesc[i].expired = TRUE;
-                    scheduler_push_task(tcp_retransmission, TASKPRIO_TCP);
-                    found = TRUE;
+            } else if (timer_id == sock->tcb_vars.txTimer) {
+                sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
+                scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
+            } else {
+                // retransmission timeout, mark the expired timers
+                for (int i = 0; i < NUM_OF_SGMTS; i++) {
+                    if (timer_id == sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer) {
+                        sock->tcb_vars.sendBuffer.txDesc[i].expired = TRUE;
+                        tcp_retransmission(sock);
+                    }
                 }
             }
-        }
 
-        if (!found)
-            sock = sock->next;
-        else
-            break;
+            opentcp_vars.timer_list[i].id = 0;
+            opentcp_vars.timer_list[i].sock = NULL;
+        }
     }
 }
 
@@ -2173,7 +2078,7 @@ void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t *s)
         dst_port = packetfunctions_ntohs((uint8_t * ) & (((tcp_ht *) (segment->l4_payload))->destination_port));
     }
 
-    tcp_socket_t * sock = tcp_socket_list;
+    tcp_socket_t *sock = opentcp_vars.tcp_socket_list;
     while (sock != NULL && sock->tcb_vars.myPort != src_port) {
         sock = sock->next;
     }
@@ -2212,8 +2117,7 @@ void tcp_sack_send_buffer(tcp_socket_t *sock, uint32_t left_edge, uint32_t right
             len = sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_pld_length;
 
             if (seq >= left_edge && seq + len <= right_edge) {
-                opentimers_cancel(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
-                opentimers_destroy(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer);
+                tcp_rm_timer(sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer, TRUE);
                 tcp_rm_from_send_buffer(sock, sock->tcb_vars.sendBuffer.txDesc[i].segment);
             }
         }
@@ -2256,4 +2160,44 @@ void tcp_parse_sack_blocks(tcp_socket_t *sock, uint8_t *sack_block, uint8_t len)
         tcp_sack_send_buffer(sock, left_edge, right_edge);
         ptr += sizeof(uint32_t);
     }
+}
+
+owerror_t tcp_add_timer(tcp_socket_t *sock, opentimers_id_t timer_id, uint32_t timeout) {
+    // find a free space in the timer list
+    uint8_t i;
+
+    for (i = 0; i < CONCURRENT_TCP_TIMERS; i++) {
+        if (opentcp_vars.timer_list[i].id == 0) {
+            break;
+        }
+    }
+
+    if (i == CONCURRENT_TCP_TIMERS)
+        return E_FAIL;
+
+    opentcp_vars.timer_list[i].id = timer_id;
+    opentcp_vars.timer_list[i].sock = sock;
+
+    opentimers_scheduleAbsolute(timer_id, timeout, opentimers_getValue(), TIME_MS, tcp_timer_cb);
+    return E_SUCCESS;
+}
+
+owerror_t tcp_rm_timer(opentimers_id_t timer_id, bool destroy) {
+    uint8_t i;
+
+    for (i = 0; i < CONCURRENT_TCP_TIMERS; i++) {
+        if (opentcp_vars.timer_list[i].id == timer_id) {
+            opentcp_vars.timer_list[i].id = 0;
+            opentcp_vars.timer_list[i].sock = NULL;
+            opentimers_cancel(timer_id);
+
+            if (destroy)
+                opentimers_destroy(timer_id);
+
+            return E_SUCCESS;
+        }
+    }
+
+    // couldn't find the timer
+    return E_FAIL;
 }
