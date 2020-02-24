@@ -34,8 +34,13 @@
 //-- 04-TRAN
 #include "openudp.h"
 #include "opentcp.h"
+
+#ifndef RAM_SIZE_64KB
+
 //===== applications
 #include "openapps.h"
+
+#endif
 
 //=========================== variables =======================================
 
@@ -78,8 +83,11 @@ void openstack_init(void) {
    openudp_init();
    opentcp_init();
 
+#ifndef RAM_SIZE_64KB
+
    //===== applications
    openapps_init();
+#endif
 
    openserial_printInfo(
       COMPONENT_OPENWSN,ERR_BOOTED,
