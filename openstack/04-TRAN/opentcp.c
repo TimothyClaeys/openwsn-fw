@@ -2,7 +2,6 @@
 #include "forwarding.h"
 #include "opentcp.h"
 #include "openserial.h"
-#include "board.h"
 #include "packetfunctions.h"
 #include "scheduler.h"
 #include "openrandom.h"
@@ -30,7 +29,7 @@ opentcp_vars_t opentcp_vars;
 //=========================== constants =======================================
 
 // used for RTO calculations
-#define G       0.001
+#define G       0.5
 #define K       4
 
 //=========================== variables =======================================
@@ -60,7 +59,7 @@ void tcp_state_timeout(tcp_socket_t *sock);
 
 uint16_t tcp_calc_wnd_size(tcp_socket_t *sock);
 
-void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t *sock);
+void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t **sock);
 
 void tcp_parse_sack_blocks(tcp_socket_t *sock, uint8_t *sack_block, uint8_t len);
 
@@ -76,7 +75,7 @@ uint8_t tcp_calc_sack_size(tcp_socket_t *sock);
 
 int8_t tcp_store_segment(tcp_socket_t *sock, OpenQueueEntry_t *segment);
 
-void tcp_get_new_buffer(tcp_socket_t *sock, tx_sgmt_t *pkt);
+void tcp_get_new_buffer(tcp_socket_t *sock, tx_sgmt_t **pkt);
 
 bool tcp_check_flags(OpenQueueEntry_t *segment, uint8_t ack, uint8_t rst, uint8_t syn, uint8_t fin);
 
@@ -178,12 +177,8 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
     tx_sgmt_t *syn_pkt;
     uint8_t optsize, options = 0;
 
-    //If trying to open an connection and not in TCP_STATE_CLOSED, reset connection.
+    // If trying to open an connection and not in TCP_STATE_CLOSED
     if (sock->tcb_vars.state != TCP_STATE_CLOSED) {
-        openserial_printError(COMPONENT_OPENTCP, ERR_WRONG_TCP_STATE,
-                              (errorparameter_t) sock->tcb_vars.state,
-                              (errorparameter_t) 0);
-        opentcp_reset(sock);
         return E_FAIL;
     }
 
@@ -200,7 +195,7 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
     // start the state machine timer (tcp timeout if state machine gets stuck)
     tcp_add_timer(sock, sock->tcb_vars.stateTimer, TCP_TIMEOUT);
 
-    sock->tcb_vars.rtt = ((float) board_timer_get()) / 1000;
+    sock->tcb_vars.rtt = opentimers_getValue() >> 15;
     sock->tcb_vars.isRTTRunning = TRUE;
 
     // Register parameters of the host to which we want to connect
@@ -209,8 +204,7 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
     sock->tcb_vars.hisPort = hisPort;
     memcpy(&sock->tcb_vars.hisIPv6Address, dest, sizeof(open_addr_t));
 
-    syn_pkt = NULL;
-    tcp_get_new_buffer(sock, syn_pkt);
+    tcp_get_new_buffer(sock, &syn_pkt);
     if (syn_pkt == NULL)
         return E_FAIL;
 
@@ -221,15 +215,7 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
 
     tcp_add_options(sock, syn_pkt->segment, optsize, options);
 
-    tcp_prepend_header(
-            sock,
-            syn_pkt->segment,
-            TCP_ACK_NO,
-            TCP_PSH_NO,
-            TCP_RST_NO,
-            TCP_SYN_YES,
-            TCP_FIN_NO,
-            optsize);
+    tcp_prepend_header(sock, syn_pkt->segment, TCP_ACK_NO, TCP_PSH_NO, TCP_RST_NO, TCP_SYN_YES, TCP_FIN_NO, optsize);
 
     // pointer assignment
     syn_pkt->segment->l4_payload = syn_pkt->segment->payload;
@@ -423,9 +409,9 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
         return;
     }
 
-    sock = NULL;
-    tcp_fetch_socket(segment, FALSE, sock);
+    tcp_fetch_socket(segment, FALSE, &sock);
     if (sock == NULL) {
+        printf("Corresponding socket found\n");
         openqueue_freePacketBuffer(segment);
         board_reset();
     }
@@ -515,8 +501,7 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
             TCP_STATE_CHANGE(sock, TCP_STATE_CLOSE_WAIT);
 
             //I send FIN+ACK
-            tempPkt = NULL;
-            tcp_get_new_buffer(sock, tempPkt);
+            tcp_get_new_buffer(sock, &tempPkt);
             if (tempPkt == NULL) {
                 return;
             }
@@ -566,11 +551,11 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
     tcp_socket_t *sock;
     tx_sgmt_t *tcp_sgmt;
 
+    printf("Receiving packet\n");
 
     segment->l4_payload = segment->payload;
 
-    sock = NULL;
-    tcp_fetch_socket(segment, TRUE, sock);
+    tcp_fetch_socket(segment, TRUE, &sock);
     if (sock == NULL) {
         tcp_send_rst(segment);
         openqueue_freePacketBuffer(segment);
@@ -614,8 +599,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
 
                 optsize = tcp_calc_optsize(sock, options);
 
-                tcp_sgmt = NULL;
-                tcp_get_new_buffer(sock, tcp_sgmt);
+                tcp_get_new_buffer(sock, &tcp_sgmt);
                 if (tcp_sgmt == NULL) {
                     return;
                 }
@@ -646,7 +630,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                         optsize);
 
 
-                sock->tcb_vars.rtt = ((float) board_timer_get()) / 1000;
+                sock->tcb_vars.rtt = opentimers_getValue() >> 15;
                 sock->tcb_vars.isRTTRunning = TRUE;
 
                 tcp_sgmt->segment->l4_payload = tcp_sgmt->segment->payload;
@@ -713,8 +697,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
 
                 optsize = tcp_calc_optsize(sock, options);
 
-                tcp_sgmt = NULL;
-                tcp_get_new_buffer(sock, tcp_sgmt);
+                tcp_get_new_buffer(sock, &tcp_sgmt);
                 if (tcp_sgmt == NULL) {
                     return;
                 }
@@ -973,8 +956,7 @@ owerror_t opentcp_close(tcp_socket_t *sock) {    //[command] teardown
         return E_SUCCESS;
     }
 
-    finPkt = NULL;
-    tcp_get_new_buffer(sock, finPkt);
+    tcp_get_new_buffer(sock, &finPkt);
     if (finPkt == NULL) {
         return E_FAIL;
     }
@@ -1066,8 +1048,7 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
         }
 #endif
 
-        tcp_packet = NULL;
-        tcp_get_new_buffer(sock, tcp_packet);
+        tcp_get_new_buffer(sock, &tcp_packet);
         if (tcp_packet == NULL) {
             openserial_printError(COMPONENT_OPENTCP, ERR_NO_FREE_PACKET_BUFFER,
                                   (errorparameter_t) 0,
@@ -1153,7 +1134,7 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
 
             tcp_schedule_rto(sock, tcp_packet);
 
-            sock->tcb_vars.rtt = ((float) board_timer_get()) / 1000;
+            sock->tcb_vars.rtt = opentimers_getValue() >> 15;
             sock->tcb_vars.isRTTRunning = TRUE;
 
 
@@ -1210,12 +1191,12 @@ void tcp_calc_init_rto(tcp_socket_t *sock) {
 
     // fall back RTO if handshake didn't complete properly on first try
     if (retransmit_count > 0) {
-        sock->tcb_vars.rtt = ((float) board_timer_get() / 1000) - sock->tcb_vars.rtt;
+        sock->tcb_vars.rtt = (opentimers_getValue() >> 15) - sock->tcb_vars.rtt;
         sock->tcb_vars.rto = TCP_RTO_FALLBACK;
         sock->tcb_vars.srtt = 0;
         sock->tcb_vars.rttvar = 0;
     } else {
-        sock->tcb_vars.rtt = ((float) board_timer_get() / 1000) - sock->tcb_vars.rtt;
+        sock->tcb_vars.rtt = (opentimers_getValue() >> 15) - sock->tcb_vars.rtt;
 
         sock->tcb_vars.isRTTRunning = FALSE;
 
@@ -1250,7 +1231,7 @@ void tcp_calc_rto(tcp_socket_t *sock) {
             if (SEQN(sock->tcb_vars.sendBuffer.txDesc[i]) + len == sock->tcb_vars.hisAckNum &&
                 sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_retransmits == 0) {
 
-                sock->tcb_vars.rtt = ((float) board_timer_get() / 1000) - sock->tcb_vars.rtt;
+                sock->tcb_vars.rtt = (opentimers_getValue() >> 15) - sock->tcb_vars.rtt;
 
                 if (sock->tcb_vars.srtt == 0 && sock->tcb_vars.rttvar == 0) {
                     sock->tcb_vars.srtt = sock->tcb_vars.rtt;
@@ -1418,7 +1399,7 @@ uint32_t tcp_schedule_rto(tcp_socket_t *sock, tx_sgmt_t *txtcp) {
     txtcp->rtoTimer = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_TCP);
     txtcp->expired = FALSE;
 
-    rto = (uint32_t)(sock->tcb_vars.rto * (1 << txtcp->segment->l4_retransmits));
+    rto = (uint32_t)(sock->tcb_vars.rto * 200 * (1 << txtcp->segment->l4_retransmits));
 
     rto = (uint32_t)FMAX(rto, TCP_RTO_MIN);
     rto = (uint32_t)FMIN(rto, TCP_RTO_MAX);
@@ -1890,7 +1871,7 @@ void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t
     }
 }
 
-void tcp_get_new_buffer(tcp_socket_t *sock, tx_sgmt_t *pkt) {
+void tcp_get_new_buffer(tcp_socket_t *sock, tx_sgmt_t **pkt) {
     for (int8_t i = 0; i < NUM_OF_SGMTS; i++) {
         if (sock->tcb_vars.sendBuffer.txDesc[i].segment == NULL) {
             // check how many large packets are still free
@@ -1903,7 +1884,7 @@ void tcp_get_new_buffer(tcp_socket_t *sock, tx_sgmt_t *pkt) {
                         ERR_NO_FREE_PACKET_BUFFER,
                         (errorparameter_t) 0,
                         (errorparameter_t) 0);
-                pkt = NULL;
+                *pkt = NULL;
                 return;
             }
 
@@ -1914,14 +1895,14 @@ void tcp_get_new_buffer(tcp_socket_t *sock, tx_sgmt_t *pkt) {
             sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_destination_port = sock->tcb_vars.hisPort;
             sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_retransmits = 0;
 
-            pkt = &sock->tcb_vars.sendBuffer.txDesc[i];
+            *pkt = &sock->tcb_vars.sendBuffer.txDesc[i];
             return;
         }
     }
 
     openserial_printError(COMPONENT_OPENTCP, ERR_NO_MORE_SGMTS, (errorparameter_t) 0, (errorparameter_t) 0);
     // no place in buffer
-    pkt = NULL;
+    *pkt = NULL;
 }
 
 //
@@ -2015,6 +1996,7 @@ void tcp_transmit() {
 }
 
 void tcp_timer_cb(opentimers_id_t id) {
+    printf("timer expired!\n");
     uint8_t i;
     opentimers_id_t timer_id;
     tcp_socket_t *sock;
@@ -2066,7 +2048,7 @@ uint16_t tcp_calc_wnd_size(tcp_socket_t *sock) {
     return left;
 }
 
-void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t *s) {
+void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t **s) {
     uint16_t src_port;
     uint16_t dst_port;
 
@@ -2085,22 +2067,22 @@ void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t *s)
 
     // socket does not exist or nobody is listening
     if (sock == NULL || sock->tcb_vars.state == TCP_STATE_CLOSED) {
-        s = NULL;
+        *s = NULL;
         return;
     }
 
     // we have yet registered the remote port so skip this check
     if (sock->tcb_vars.state == TCP_STATE_LISTEN) {
-        s = sock;
+        *s = sock;
         return;
     }
 
     if (sock->tcb_vars.state > TCP_STATE_LISTEN && dst_port == sock->tcb_vars.hisPort) {
-        s = sock;
+        *s = sock;
         return;
     }
 
-    s = NULL;
+    *s = NULL;
 }
 
 void tcp_sack_send_buffer(tcp_socket_t *sock, uint32_t left_edge, uint32_t right_edge) {
