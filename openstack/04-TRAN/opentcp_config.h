@@ -11,7 +11,7 @@
 //#define SACK_OPTION
 //#define MSS_OPTION
 
-//#define TCP_DEBUG
+#define TCP_DEBUG
 
 
 #endif

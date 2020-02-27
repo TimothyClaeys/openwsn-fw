@@ -14,15 +14,13 @@
 
 techo_client_vars_t techo_client_vars;
 
-static const char *payload = "%d) Lorem ipsum";
+static const char *payload = "Lorem ipsum";
 
 
 static const uint8_t techo_dst_addr[] = {
         0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
 };
-
-static int cnt = 1;
 
 //=========================== prototypes ======================================
 
@@ -113,7 +111,8 @@ void techo_client_send() {
         techo_client_vars.sent_so_far = 0;
         techo_client_vars.busy_sending = TRUE;
         memset(techo_client_vars.send_buffer, 0, BUFSIZE);
-        techo_client_vars.msg_size = openrandom_get16b() % strlen(payload);
+        memcpy(techo_client_vars.send_buffer, payload, strlen(payload));
+        techo_client_vars.msg_size = strlen(payload);
     }
 
     if ((written = opentcp_send(&techo_client_vars.socket,
@@ -123,14 +122,14 @@ void techo_client_send() {
 #ifdef SIM_DEBUG
         printf("Echo failed\n");
 #endif
-        board_reset();
+        techo_client_close();
         return;
     }
 
     techo_client_vars.sent_so_far += written;
 
     if (techo_client_vars.sent_so_far == techo_client_vars.msg_size) {
-        cnt++;
+        techo_client_vars.echo_count++;
         techo_client_vars.busy_sending = FALSE;
         techo_client_change_state(TECHO_CLI_RECEIVING);
         memset(techo_client_vars.send_buffer, 0, BUFSIZE);
@@ -200,7 +199,7 @@ void techo_client_connect() {
     dest.type = ADDR_128B;
     memcpy(&(dest.addr_128b[0]), techo_dst_addr, 16);
 
-    if (opentcp_connect(&techo_client_vars.socket, WKP_UDP_ECHO, &dest) == E_FAIL) {
+    if (opentcp_connect(&techo_client_vars.socket, 5005, &dest) == E_FAIL) {
         //techo_client_close();
     } else {
         techo_client_change_state(TECHO_CLI_SENDING);
@@ -219,6 +218,7 @@ void techo_client_close() {
 #endif
 
     opentcp_close(&techo_client_vars.socket);
+    opentcp_unregister(&techo_client_vars.socket);
 }
 
 void techo_client_change_state(uint8_t state) {

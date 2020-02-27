@@ -205,7 +205,7 @@ enum {
    ERR_INVALID_CHECKSUM                = 0x09, // invalid checksum, expected 0x{:04x}, found 0x{:04x}
    ERR_WRONG_TCP_STATE                 = 0x0a, // wrong TCP state {0} (location {1})
    ERR_TCP_CONNECTING                  = 0x0b, // TCP connecting to port {0}
-   ERR_TCP_SEND                        = 0x0c, // TCP sending {0} bytes (in flight {1})
+   ERR_TCP_SEND                        = 0x0c, // TCP sending {0} bytes (#seq. {1})
    ERR_TCP_TX_BUF_FULL                 = 0x0d, // TCP transmission buffer full, written {0}
    ERR_TCP_CONN_ESTABLISHED            = 0x0e, // TCP connection established with port {0}
    ERR_TCP_INVALID_HDR                 = 0x0f, // invalid TCP header
@@ -296,6 +296,15 @@ enum {
    ERR_UNSUPPORTED_METADATA            = 0x5f, // the metadata type is not suppored
    ERR_MAXRETRIES_REACHED              = 0x60, // maxretries reached (counter: {0})
    ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER    = 0x61, // empty queue or trying to remove unknown timer id (code location {0})
+
+   ERR_TCP_RTT_RTO                     = 0x62, // RTT: {0} and RTO: {1}
+   ERR_TCP_SEND_RST                    = 0x63, // sending TCP reset
+   ERR_TCP_SEND_ACK                    = 0x64, // sending an ACK (ack num: {0})
+   ERR_TCP_BYTES_IN_FLIGHT             = 0x65, // bytes in flight: {0}
+   ERR_TCP_USELESS_RETRANSMIT          = 0x66, // useless transmission (hisSeq: {0} < myAck: {1})
+   ERR_TCP_RECV                        = 0x67, // received tcp data (hisSeq: {0} - len: {1})
+   ERR_TCP_REORDER_OR_LOSS             = 0x68, // tcp out-of-order (hisSeq: {0} > myAck: {1})
+
 };
 
 //=========================== typedef =========================================

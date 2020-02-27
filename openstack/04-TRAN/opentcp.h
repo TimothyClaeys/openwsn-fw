@@ -48,19 +48,17 @@ enum TCP_RECV_BUFFER_enums {
 enum {
     TCP_INITIAL_SEQNUM = 100,
     TCP_TIMEOUT = 120000, //in ms
-#ifdef LARGE_DELAYED_ACK
-    TCP_DELAYED_ACK = 1000,
-#else
-    TCP_DELAYED_ACK = 150,
-#endif
-    TCP_RTO_MAX = 25000,
-#ifdef CONSERVATIVE_INITIAL_RTO
-    TCP_RTO_MIN = 4000,
-#else
+    TCP_RTO_MAX = 60000,
     TCP_RTO_MIN = 1000,
-#endif
     TCP_RTO_FALLBACK = 3000,
-    TCP_TX_BACKOFF = 200
+    TCP_TX_BACKOFF = 200,
+#ifdef DELAYED_ACK
+#ifdef LARGE_DELAYED_ACK
+    TCP_DELAYED_ACK = 1000
+#else
+    TCP_DELAYED_ACK = 150
+#endif
+#endif
 };
 
 enum TCP_STATE_enums {
@@ -222,7 +220,6 @@ typedef struct {
     uint16_t hisSlidingWindow;
     uint16_t bytesInFlight;
     open_addr_t hisIPv6Address;
-    uint8_t tcp_timer_flags;
     bool fin_pending;
 
     // rto calculation
