@@ -29,7 +29,7 @@ opentcp_vars_t opentcp_vars;
 //=========================== constants =======================================
 
 // used for RTO calculations
-#define G       0.5
+#define G       1
 #define K       4
 
 //=========================== variables =======================================
@@ -81,7 +81,7 @@ bool tcp_check_flags(OpenQueueEntry_t *segment, uint8_t ack, uint8_t rst, uint8_
 
 owerror_t tcp_parse_header(tcp_socket_t *sock, OpenQueueEntry_t *segment);
 
-void tcp_retransmission(tcp_socket_t *sock);
+void tcp_retransmit(tcp_socket_t *sock);
 
 void tcp_transmit(void);
 
@@ -91,7 +91,7 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock);
 
 void tcp_rcv_buf_merge(tcp_socket_t *sock);
 
-void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t *sgmt);
+void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t **sgmt);
 
 void tcp_free_desc(rx_sgmt_t *desc);
 
@@ -107,7 +107,7 @@ void opentcp_init() {
     memset(&opentcp_vars, 0, sizeof(opentcp_vars_t));
 }
 
-owerror_t opentcp_register(tcp_socket_t *sock) {
+owerror_t opentcp_register(tcp_socket_t *const sock) {
     // reset all the tcp state variables for this socket
     memset(&(sock->tcb_vars), 0, sizeof(tcb_t));
 
@@ -173,7 +173,7 @@ owerror_t opentcp_listen(tcp_socket_t *sock, uint16_t myPort) {
     }
 }
 
-owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *dest) {
+owerror_t opentcp_connect(tcp_socket_t *const sock, uint16_t hisPort, open_addr_t *dest) {
     tx_sgmt_t *syn_pkt;
     uint8_t optsize, options = 0;
 
@@ -195,13 +195,14 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
     // start the state machine timer (tcp timeout if state machine gets stuck)
     tcp_add_timer(sock, sock->tcb_vars.stateTimer, TCP_TIMEOUT);
 
-    sock->tcb_vars.rtt = opentimers_getValue() >> 15;
+    sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000);
     sock->tcb_vars.isRTTRunning = TRUE;
 
     // Register parameters of the host to which we want to connect
     // allocate random port number
     sock->tcb_vars.myPort = openrandom_get16b();
     sock->tcb_vars.hisPort = hisPort;
+
     memcpy(&sock->tcb_vars.hisIPv6Address, dest, sizeof(open_addr_t));
 
     tcp_get_new_buffer(sock, &syn_pkt);
@@ -229,13 +230,15 @@ owerror_t opentcp_connect(tcp_socket_t *sock, uint16_t hisPort, open_addr_t *des
 
         // reset TCP state if connect failed
         sock->tcb_vars.state = TCP_STATE_CLOSED;
+        tcp_rm_timer(sock->tcb_vars.stateTimer, FALSE);
         tcp_rm_from_send_buffer(sock, syn_pkt->segment);
         return E_FAIL;
     } else {
         tcp_schedule_rto(sock, syn_pkt);
         openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_SEND,
                              (errorparameter_t) syn_pkt->segment->l4_pld_length,
-                             (errorparameter_t) sock->tcb_vars.mySeqNum + sock->tcb_vars.bytesInFlight);
+                             (errorparameter_t) sock->tcb_vars.mySeqNum + sock->tcb_vars.bytesInFlight -
+                             TCP_INITIAL_SEQNUM);
         sock->tcb_vars.bytesInFlight += 1;
         return E_SUCCESS;
     }
@@ -346,6 +349,8 @@ int opentcp_send(tcp_socket_t *sock, const unsigned char *message, uint16_t size
     uint32_t offset;
     uint8_t *write_ptr = NULL;
 
+    printf("Send: %s\n", message);
+
     if (sock->tcb_vars.sendBuffer.start + sock->tcb_vars.sendBuffer.len >
         &(sock->tcb_vars.sendBuffer.rngBuf[SEND_BUF_SIZE])) {
         offset = sock->tcb_vars.sendBuffer.start + sock->tcb_vars.sendBuffer.len -
@@ -386,8 +391,10 @@ int opentcp_send(tcp_socket_t *sock, const unsigned char *message, uint16_t size
     }
 
     if (sock->tcb_vars.sendBuffer.len > 0) {
-        scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
+        //scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
+        tcp_prep_and_send_segment(sock);
     }
+
 
     if (written < size)
         openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_TX_BUF_FULL, (errorparameter_t) written, (errorparameter_t) 0);
@@ -411,7 +418,6 @@ void opentcp_sendDone(OpenQueueEntry_t *segment, owerror_t error) {
 
     tcp_fetch_socket(segment, FALSE, &sock);
     if (sock == NULL) {
-        printf("Corresponding socket found\n");
         openqueue_freePacketBuffer(segment);
         board_reset();
     }
@@ -551,8 +557,6 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
     tcp_socket_t *sock;
     tx_sgmt_t *tcp_sgmt;
 
-    printf("Receiving packet\n");
-
     segment->l4_payload = segment->payload;
 
     tcp_fetch_socket(segment, TRUE, &sock);
@@ -586,9 +590,6 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
             if (tcp_check_flags(segment, TCP_ACK_NO, TCP_RST_NO, TCP_SYN_YES, TCP_FIN_NO)) {
                 //I received a SYN, I send SYN+ACK
                 uint8_t optsize, options = 0;
-
-                options = 0;
-
 #ifdef MSS_OPTION
                 options |= (1 << OPTION_MSS);
 #endif
@@ -630,7 +631,7 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                         optsize);
 
 
-                sock->tcb_vars.rtt = opentimers_getValue() >> 15;
+                sock->tcb_vars.rtt = ((((float)opentimers_getValue())/ 32768) * 1000);
                 sock->tcb_vars.isRTTRunning = TRUE;
 
                 tcp_sgmt->segment->l4_payload = tcp_sgmt->segment->payload;
@@ -781,7 +782,6 @@ void opentcp_receive(OpenQueueEntry_t *segment) {
                 tcp_ack_send_buffer(sock, sock->tcb_vars.hisAckNum);
                 sock->tcb_vars.mySeqNum = sock->tcb_vars.hisAckNum;
             }
-
             TCP_STATE_CHANGE(sock, TCP_STATE_ESTABLISHED);
 
             if (tcp_check_flags(segment, TCP_ACK_WHATEVER, TCP_RST_NO, TCP_SYN_NO, TCP_FIN_YES)) {
@@ -1011,6 +1011,9 @@ void opentcp_reset(tcp_socket_t *sock) {
     sock->tcb_vars.recvBuffer.start = &sock->tcb_vars.recvBuffer.rngBuf[0];
     sock->tcb_vars.sendBuffer.start = &sock->tcb_vars.sendBuffer.rngBuf[0];
 
+    for (int i = 0; i < CONCURRENT_TCP_TIMERS; i++)
+        printf("%d ", opentcp_vars.timer_list[i].id);
+    printf("\n");
 }
 
 void tcp_prep_and_send_segment(tcp_socket_t *sock) {
@@ -1050,9 +1053,6 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
 
         tcp_get_new_buffer(sock, &tcp_packet);
         if (tcp_packet == NULL) {
-            openserial_printError(COMPONENT_OPENTCP, ERR_NO_FREE_PACKET_BUFFER,
-                                  (errorparameter_t) 0,
-                                  (errorparameter_t) 0);
             no_more_packets = TRUE;
             break;
         }
@@ -1072,11 +1072,8 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
         tcp_packet->segment->l4_pld_length = pldsize;
         packetfunctions_reserveHeaderSize(tcp_packet->segment, pldsize);
 
-        //DISABLE_INTERRUPTS();
-
         if (sock->tcb_vars.sendBuffer.start + pldsize < &(sock->tcb_vars.sendBuffer.rngBuf[SEND_BUF_SIZE])) {
             memcpy(tcp_packet->segment->payload, sock->tcb_vars.sendBuffer.start, pldsize);
-            memset(sock->tcb_vars.sendBuffer.start, 0, pldsize);
             sock->tcb_vars.sendBuffer.start += pldsize;
         } else {
             uint16_t len1 = &(sock->tcb_vars.sendBuffer.rngBuf[SEND_BUF_SIZE]) - sock->tcb_vars.sendBuffer.start;
@@ -1085,13 +1082,8 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
             memcpy(tcp_packet->segment->payload, sock->tcb_vars.sendBuffer.start, len1);
             memcpy(tcp_packet->segment->payload + len1, sock->tcb_vars.sendBuffer.rngBuf, len2);
 
-            memset(sock->tcb_vars.sendBuffer.start, 0, len1);
-            memset(sock->tcb_vars.sendBuffer.rngBuf, 0, len2);
-
             sock->tcb_vars.sendBuffer.start = sock->tcb_vars.sendBuffer.rngBuf + len2;
         }
-
-        //ENABLE_INTERRUPTS();
 
         if (optsize > 0)
             tcp_add_options(sock, tcp_packet->segment, optsize, options);
@@ -1134,7 +1126,7 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
 
             tcp_schedule_rto(sock, tcp_packet);
 
-            sock->tcb_vars.rtt = opentimers_getValue() >> 15;
+            sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000);
             sock->tcb_vars.isRTTRunning = TRUE;
 
 
@@ -1146,22 +1138,22 @@ void tcp_prep_and_send_segment(tcp_socket_t *sock) {
     if (sock->tcb_vars.sendBuffer.len > 0) {
         if (no_more_packets) {
             // no more space in openqueue, back off for a while
-            sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
+            // sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
             tcp_rm_timer(sock->tcb_vars.txTimer, FALSE);
             tcp_add_timer(sock, sock->tcb_vars.txTimer, TCP_TX_BACKOFF);
         } else {
             // we still have packets in the openqueue buffer left so immediately try again
-            sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
+            // sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
             scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
         }
     }
 
     if (sock->tcb_vars.sendBuffer.len == 0) {
         uint8_t mask = 0;
-        mask |= (1 << TX_RETRY);
+        // mask |= (1 << TX_RETRY);
 
         // remove tx tcp flag
-        sock->tcb_vars.tcp_timer_flags &= (~mask);
+        // sock->tcb_vars.tcp_timer_flags &= (~mask);
     }
 
 
@@ -1191,12 +1183,14 @@ void tcp_calc_init_rto(tcp_socket_t *sock) {
 
     // fall back RTO if handshake didn't complete properly on first try
     if (retransmit_count > 0) {
-        sock->tcb_vars.rtt = (opentimers_getValue() >> 15) - sock->tcb_vars.rtt;
+        sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000) - sock->tcb_vars.rtt;
+        printf("%f\n", sock->tcb_vars.rtt);
         sock->tcb_vars.rto = TCP_RTO_FALLBACK;
         sock->tcb_vars.srtt = 0;
         sock->tcb_vars.rttvar = 0;
     } else {
-        sock->tcb_vars.rtt = (opentimers_getValue() >> 15) - sock->tcb_vars.rtt;
+        sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000) - sock->tcb_vars.rtt;
+        printf("%f\n", sock->tcb_vars.rtt);
 
         sock->tcb_vars.isRTTRunning = FALSE;
 
@@ -1231,7 +1225,8 @@ void tcp_calc_rto(tcp_socket_t *sock) {
             if (SEQN(sock->tcb_vars.sendBuffer.txDesc[i]) + len == sock->tcb_vars.hisAckNum &&
                 sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_retransmits == 0) {
 
-                sock->tcb_vars.rtt = (opentimers_getValue() >> 15) - sock->tcb_vars.rtt;
+                sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000) - sock->tcb_vars.rtt;
+                printf("%f\n", sock->tcb_vars.rtt);
 
                 if (sock->tcb_vars.srtt == 0 && sock->tcb_vars.rttvar == 0) {
                     sock->tcb_vars.srtt = sock->tcb_vars.rtt;
@@ -1352,7 +1347,7 @@ void tcp_send_ack_now(tcp_socket_t *sock) {
 
 #ifdef TCP_DEBUG
     openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_SEND_ACK,
-                         (errorparameter_t) (sock->tcb_vars.myAckNum - sock->tcb_vars.hisInitSeqNum),
+                         (errorparameter_t)(sock->tcb_vars.myAckNum - sock->tcb_vars.hisInitSeqNum),
                          (errorparameter_t) 0);
 #endif
 
@@ -1363,7 +1358,7 @@ void tcp_send_ack_now(tcp_socket_t *sock) {
     }
 }
 
-void tcp_retransmission(tcp_socket_t *sock) {
+void tcp_retransmit(tcp_socket_t *sock) {
     for (int i = 0; i < NUM_OF_SGMTS; i++) {
         if (sock->tcb_vars.sendBuffer.txDesc[i].expired) {
 
@@ -1397,9 +1392,16 @@ uint32_t tcp_schedule_rto(tcp_socket_t *sock, tx_sgmt_t *txtcp) {
     uint32_t rto;
 
     txtcp->rtoTimer = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_TCP);
+
+    if (txtcp->rtoTimer == ERROR_NO_AVAILABLE_ENTRIES) {
+#ifdef SIM_DEBUG
+        printf("No more timers, couldn't arm retransmission timer!\n");
+#endif
+    }
+
     txtcp->expired = FALSE;
 
-    rto = (uint32_t)(sock->tcb_vars.rto * 200 * (1 << txtcp->segment->l4_retransmits));
+    rto = (uint32_t)(sock->tcb_vars.rto * (1 << txtcp->segment->l4_retransmits));
 
     rto = (uint32_t)FMAX(rto, TCP_RTO_MIN);
     rto = (uint32_t)FMIN(rto, TCP_RTO_MAX);
@@ -1593,6 +1595,7 @@ owerror_t tcp_parse_header(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
     // this might change if we encountered an out-of-order packet
     sock->tcb_vars.hisSeqNum = seq_num;
 
+    // tcp header length (takes into account tcp options)
     segment->l4_hdr_length = (((((tcp_ht *) segment->payload)->data_offset) >> 4)) * sizeof(uint32_t);
 
     sock->tcb_vars.hisSlidingWindow = packetfunctions_ntohs(
@@ -1601,19 +1604,21 @@ owerror_t tcp_parse_header(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
     segment->owner = sock->socket_id;
     segment->l4_protocol = IANA_TCP;
     segment->l4_payload = segment->payload;
+
+    // actual length of the tcp payload
     segment->l4_pld_length = segment->length - segment->l4_hdr_length;
 
     // copy segment checksum, so we can compare against or own calculated checksum
-    remote_chksum = packetfunctions_ntohs((uint8_t * ) & (((tcp_ht *) segment->payload)->checksum));
-    packetfunctions_calculateChecksum(segment, (uint8_t * ) & (((tcp_ht *) segment->payload)->checksum));
-    local_chksum = packetfunctions_ntohs((uint8_t * ) & (((tcp_ht *) segment->payload)->checksum));
+    // remote_chksum = packetfunctions_ntohs((uint8_t * ) & (((tcp_ht *) segment->payload)->checksum));
+    // packetfunctions_calculateChecksum(segment, (uint8_t * ) & (((tcp_ht *) segment->payload)->checksum));
+    // local_chksum = packetfunctions_ntohs((uint8_t * ) & (((tcp_ht *) segment->payload)->checksum));
 
-    if (local_chksum != remote_chksum) {
-        //TODO: still not fully correct (missing 4 bytes?)
-        //openserial_printError(COMPONENT_OPENTCP, ERR_TCP_WRONG_CHKSUM, (errorparameter_t) 0, (errorparameter_t) 0);
-        //openqueue_freePacketBuffer(segment);
-        //return E_FAIL;
-    }
+    // if (local_chksum != remote_chksum) {
+    //     //TODO: still not fully correct (missing 4 bytes?)
+    //     //openserial_printError(COMPONENT_OPENTCP, ERR_TCP_WRONG_CHKSUM, (errorparameter_t) 0, (errorparameter_t) 0);
+    //     //openqueue_freePacketBuffer(segment);
+    //     //return E_FAIL;
+    // }
 
     if (segment->l4_hdr_length > sizeof(tcp_ht)) {
         //header contains tcp options
@@ -1658,7 +1663,6 @@ owerror_t tcp_parse_header(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
 }
 
 void tcp_update_my_ack_num(tcp_socket_t *sock) {
-
     if (sock->tcb_vars.recvBuffer.head != NULL && sock->tcb_vars.myAckNum >= sock->tcb_vars.recvBuffer.head->seqn) {
         sock->tcb_vars.myAckNum = sock->tcb_vars.recvBuffer.head->seqn + sock->tcb_vars.recvBuffer.head->length;
     }
@@ -1681,10 +1685,10 @@ int8_t tcp_store_segment(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
         ret = TCP_RECVBUF_SEEN;
 #ifdef TCP_DEBUG
         openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_USELESS_RETRANSMIT,
-                             (errorparameter_t) (sock->tcb_vars.hisSeqNum -
-                                                 sock->tcb_vars.hisInitSeqNum),
-                             (errorparameter_t) (sock->tcb_vars.myAckNum -
-                                                 sock->tcb_vars.hisInitSeqNum));
+                             (errorparameter_t)(sock->tcb_vars.hisSeqNum -
+                                                sock->tcb_vars.hisInitSeqNum),
+                             (errorparameter_t)(sock->tcb_vars.myAckNum -
+                                                sock->tcb_vars.hisInitSeqNum));
 #endif
 
         len = 0;
@@ -1698,9 +1702,9 @@ int8_t tcp_store_segment(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
 
 #ifdef TCP_DEBUG
         openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_RECV,
-                             (errorparameter_t) (sock->tcb_vars.hisSeqNum -
-                                                 sock->tcb_vars.hisInitSeqNum),
-                             (errorparameter_t) (new_data));
+                             (errorparameter_t)(sock->tcb_vars.hisSeqNum -
+                                                sock->tcb_vars.hisInitSeqNum),
+                             (errorparameter_t)(new_data));
 #endif
 
     } else {
@@ -1708,13 +1712,12 @@ int8_t tcp_store_segment(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
         ret = TCP_RECVBUF_OUT_OF_ORDER;
 #ifdef TCP_DEBUG
         openserial_printInfo(COMPONENT_OPENTCP, ERR_TCP_REORDER_OR_LOSS,
-                             (errorparameter_t) (sock->tcb_vars.hisSeqNum -
-                                                 sock->tcb_vars.hisInitSeqNum),
-                             (errorparameter_t) (sock->tcb_vars.myAckNum -
-                                                 sock->tcb_vars.hisInitSeqNum));
+                             (errorparameter_t)(sock->tcb_vars.hisSeqNum -
+                                                sock->tcb_vars.hisInitSeqNum),
+                             (errorparameter_t)(sock->tcb_vars.myAckNum -
+                                                sock->tcb_vars.hisInitSeqNum));
 
 #endif
-        //seqn = seqn;
         len = segment->l4_pld_length;
         sgmt_ptr = segment->payload + segment->l4_hdr_length;
     }
@@ -1724,8 +1727,7 @@ int8_t tcp_store_segment(tcp_socket_t *sock, OpenQueueEntry_t *segment) {
     uint32_t bytes_offset = seqn - sock->tcb_vars.recvBuffer.start_num;
     b_offset = (loc_start + bytes_offset) % RECV_WND_SIZE;
 
-    added = NULL;
-    tcp_add_sgmt_desc(sock, seqn, sock->tcb_vars.recvBuffer.rngBuf + b_offset, len, added);
+    tcp_add_sgmt_desc(sock, seqn, sock->tcb_vars.recvBuffer.rngBuf + b_offset, len, &added);
     if (added == NULL) {
         return TCP_RECVBUF_FAIL;
     }
@@ -1807,7 +1809,7 @@ void tcp_rcv_buf_merge(tcp_socket_t *sock) {
 }
 
 
-void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t *sgmt) {
+void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t len, rx_sgmt_t **sgmt) {
     rx_sgmt_t *temp;
 
     if (sock->tcb_vars.recvBuffer.head == NULL) {
@@ -1817,7 +1819,7 @@ void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t
         sock->tcb_vars.recvBuffer.rxDesc[0].next = NULL;
 
         sock->tcb_vars.recvBuffer.head = &sock->tcb_vars.recvBuffer.rxDesc[0];
-        sgmt = sock->tcb_vars.recvBuffer.head;
+        *sgmt = sock->tcb_vars.recvBuffer.head;
         return;
     } else {
         // find a free spot for the handler info
@@ -1833,7 +1835,7 @@ void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t
 
         if (free_handle == NULL) {
             openserial_printError(COMPONENT_OPENTCP, ERR_NO_MORE_SGMTS, (errorparameter_t) 0, (errorparameter_t) 0);
-            sgmt = NULL;
+            *sgmt = NULL;
             return;
         }
 
@@ -1849,7 +1851,7 @@ void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t
         if (current_handle->seqn > free_handle->seqn) {
             free_handle->next = current_handle;
             sock->tcb_vars.recvBuffer.head = free_handle;
-            sgmt = free_handle;
+            *sgmt = free_handle;
             return;
         }
 
@@ -1859,13 +1861,13 @@ void tcp_add_sgmt_desc(tcp_socket_t *sock, uint32_t seqn, uint8_t *ptr, uint32_t
 
         if (current_handle->next == NULL) {
             current_handle->next = free_handle;
-            sgmt = free_handle;
+            *sgmt = free_handle;
             return;
         } else {
             temp = current_handle->next;
             current_handle->next = free_handle;
             free_handle->next = temp;
-            sgmt = free_handle;
+            *sgmt = free_handle;
             return;
         }
     }
@@ -1969,7 +1971,7 @@ void tcp_ack_send_buffer(tcp_socket_t *sock, uint32_t ack_num) {
     }
 #ifdef TCP_NAGLE
     if (sock->tcb_vars.bytesInFlight == 0 && sock->tcb_vars.sendBuffer.len > 0) {
-        sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
+        //sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
         scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
     }
 #endif
@@ -1980,9 +1982,9 @@ void tcp_transmit() {
     tcp_socket_t *sock;
 
     sock = opentcp_vars.tcp_socket_list;
-    mask |= (1 << TX_RETRY);
+    // mask |= (1 << TX_RETRY);
 
-    while (sock != NULL && (sock->tcb_vars.tcp_timer_flags & mask) == FALSE) {
+    while (sock != NULL) { // && (sock->tcb_vars.tcp_timer_flags & mask) == FALSE) {
         sock = sock->next;
     }
 
@@ -1996,37 +1998,34 @@ void tcp_transmit() {
 }
 
 void tcp_timer_cb(opentimers_id_t id) {
-    printf("timer expired!\n");
+    // we are running in task mode
     uint8_t i;
     opentimers_id_t timer_id;
     tcp_socket_t *sock;
 
     for (i = 0; i < CONCURRENT_TCP_TIMERS; i++) {
-        if (opentcp_vars.timer_list[i].id != 0 && opentimers_isRunning(opentcp_vars.timer_list[i].id)) {
+        if (opentcp_vars.timer_list[i].id != 0 && opentimers_isRunning(opentcp_vars.timer_list[i].id) == FALSE) {
             sock = opentcp_vars.timer_list[i].sock;
             timer_id = opentcp_vars.timer_list[i].id;
 
             if (timer_id == sock->tcb_vars.stateTimer) {
+                printf("State timeout\n");
                 tcp_state_timeout(sock);
 #ifdef DELAYED_ACK
                 } else if (timer_id == sock->tcb_vars.dAckTimer) {
                     tcp_send_ack_now(sock);
 #endif
             } else if (timer_id == sock->tcb_vars.txTimer) {
-                sock->tcb_vars.tcp_timer_flags |= (1 << TX_RETRY);
-                scheduler_push_task(tcp_transmit, TASKPRIO_TCP);
+                tcp_prep_and_send_segment(sock);
             } else {
                 // retransmission timeout, mark the expired timers
                 for (int i = 0; i < NUM_OF_SGMTS; i++) {
                     if (timer_id == sock->tcb_vars.sendBuffer.txDesc[i].rtoTimer) {
                         sock->tcb_vars.sendBuffer.txDesc[i].expired = TRUE;
-                        tcp_retransmission(sock);
+                        tcp_retransmit(sock);
                     }
                 }
             }
-
-            opentcp_vars.timer_list[i].id = 0;
-            opentcp_vars.timer_list[i].sock = NULL;
         }
     }
 }
@@ -2061,6 +2060,7 @@ void tcp_fetch_socket(OpenQueueEntry_t *segment, bool received, tcp_socket_t **s
     }
 
     tcp_socket_t *sock = opentcp_vars.tcp_socket_list;
+
     while (sock != NULL && sock->tcb_vars.myPort != src_port) {
         sock = sock->next;
     }
@@ -2169,12 +2169,12 @@ owerror_t tcp_rm_timer(opentimers_id_t timer_id, bool destroy) {
 
     for (i = 0; i < CONCURRENT_TCP_TIMERS; i++) {
         if (opentcp_vars.timer_list[i].id == timer_id) {
-            opentcp_vars.timer_list[i].id = 0;
-            opentcp_vars.timer_list[i].sock = NULL;
-            opentimers_cancel(timer_id);
+            memset(&opentcp_vars.timer_list[i], 0, sizeof(tcp_timer_t));
 
             if (destroy)
                 opentimers_destroy(timer_id);
+            else
+                opentimers_cancel(timer_id);
 
             return E_SUCCESS;
         }

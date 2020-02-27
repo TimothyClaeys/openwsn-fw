@@ -13,11 +13,11 @@
 //=========================== define ==========================================
 
 #define TECHO_CLI_CONN_PERIOD          4000
-#define TECHO_CLI_SEND_PERIOD          4000
+#define TECHO_CLI_SEND_PERIOD         30000
 #define TECHO_CLI_RETRY_PERIOD          500
 #define TECHO_CLI_RECV_PERIOD           500
 
-#define BUFSIZE                      	20
+#define BUFSIZE                      	 20
 #define MAX_ECHOES                	  10000
 
 //=========================== typedef =========================================
