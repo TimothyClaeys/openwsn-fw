@@ -42,11 +42,6 @@ SECTIONS
         _edata = .;
     } > SRAM
 
-    .ARM.exidx :
-    {
-        *(.ARM.exidx*)
-    } > FLASH
-
     .bss :
     {
         _bss = .;
