@@ -349,8 +349,6 @@ int opentcp_send(tcp_socket_t *sock, const unsigned char *message, uint16_t size
     uint32_t offset;
     uint8_t *write_ptr = NULL;
 
-    printf("Send: %s\n", message);
-
     if (sock->tcb_vars.sendBuffer.start + sock->tcb_vars.sendBuffer.len >
         &(sock->tcb_vars.sendBuffer.rngBuf[SEND_BUF_SIZE])) {
         offset = sock->tcb_vars.sendBuffer.start + sock->tcb_vars.sendBuffer.len -
@@ -1010,10 +1008,6 @@ void opentcp_reset(tcp_socket_t *sock) {
     sock->tcb_vars.hisIPv6Address.type = ADDR_NONE;
     sock->tcb_vars.recvBuffer.start = &sock->tcb_vars.recvBuffer.rngBuf[0];
     sock->tcb_vars.sendBuffer.start = &sock->tcb_vars.sendBuffer.rngBuf[0];
-
-    for (int i = 0; i < CONCURRENT_TCP_TIMERS; i++)
-        printf("%d ", opentcp_vars.timer_list[i].id);
-    printf("\n");
 }
 
 void tcp_prep_and_send_segment(tcp_socket_t *sock) {
@@ -1184,13 +1178,11 @@ void tcp_calc_init_rto(tcp_socket_t *sock) {
     // fall back RTO if handshake didn't complete properly on first try
     if (retransmit_count > 0) {
         sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000) - sock->tcb_vars.rtt;
-        printf("%f\n", sock->tcb_vars.rtt);
         sock->tcb_vars.rto = TCP_RTO_FALLBACK;
         sock->tcb_vars.srtt = 0;
         sock->tcb_vars.rttvar = 0;
     } else {
         sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000) - sock->tcb_vars.rtt;
-        printf("%f\n", sock->tcb_vars.rtt);
 
         sock->tcb_vars.isRTTRunning = FALSE;
 
@@ -1226,7 +1218,6 @@ void tcp_calc_rto(tcp_socket_t *sock) {
                 sock->tcb_vars.sendBuffer.txDesc[i].segment->l4_retransmits == 0) {
 
                 sock->tcb_vars.rtt = ((((float)opentimers_getValue()) / 32768) * 1000) - sock->tcb_vars.rtt;
-                printf("%f\n", sock->tcb_vars.rtt);
 
                 if (sock->tcb_vars.srtt == 0 && sock->tcb_vars.rttvar == 0) {
                     sock->tcb_vars.srtt = sock->tcb_vars.rtt;
@@ -1392,12 +1383,6 @@ uint32_t tcp_schedule_rto(tcp_socket_t *sock, tx_sgmt_t *txtcp) {
     uint32_t rto;
 
     txtcp->rtoTimer = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_TCP);
-
-    if (txtcp->rtoTimer == ERROR_NO_AVAILABLE_ENTRIES) {
-#ifdef SIM_DEBUG
-        printf("No more timers, couldn't arm retransmission timer!\n");
-#endif
-    }
 
     txtcp->expired = FALSE;
 
@@ -2009,7 +1994,6 @@ void tcp_timer_cb(opentimers_id_t id) {
             timer_id = opentcp_vars.timer_list[i].id;
 
             if (timer_id == sock->tcb_vars.stateTimer) {
-                printf("State timeout\n");
                 tcp_state_timeout(sock);
 #ifdef DELAYED_ACK
                 } else if (timer_id == sock->tcb_vars.dAckTimer) {

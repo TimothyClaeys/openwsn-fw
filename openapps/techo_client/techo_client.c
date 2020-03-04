@@ -53,9 +53,6 @@ void techo_client_init() {
 
     if ((techo_client_vars.tid = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_COAP)) ==
         ERROR_NO_AVAILABLE_ENTRIES) {
-#ifdef SIM_DEBUG
-        printf("No more available timers\n");
-#endif
         return;
     }
 
@@ -119,9 +116,6 @@ void techo_client_send() {
                                 (const unsigned char *) techo_client_vars.send_buffer + techo_client_vars.sent_so_far,
                                 techo_client_vars.msg_size - techo_client_vars.sent_so_far)) < 0) {
 
-#ifdef SIM_DEBUG
-        printf("Echo failed\n");
-#endif
         techo_client_close();
         return;
     }
@@ -135,9 +129,6 @@ void techo_client_send() {
         memset(techo_client_vars.send_buffer, 0, BUFSIZE);
         opentimers_scheduleAbsolute(techo_client_vars.tid, TECHO_CLI_RECV_PERIOD, opentimers_getValue(), TIME_MS,
                                     techo_client_timer_cb);
-#ifdef SIM_DEBUG
-        printf("Echo request sent (size: %d)\n", techo_client_vars.msg_size);
-#endif
     } else {
         opentimers_scheduleAbsolute(techo_client_vars.tid, TECHO_CLI_RETRY_PERIOD, opentimers_getValue(), TIME_MS,
                                     techo_client_timer_cb);
@@ -149,18 +140,10 @@ void techo_client_recv() {
 
     if ((read = opentcp_read(&techo_client_vars.socket, techo_client_vars.recv_buffer + techo_client_vars.rcvd_so_far,
                              1024)) < 0) {
-#ifdef SIM_DEBUG
-        printf("Echo request sent (size: %d)\n", techo_client_vars.msg_size);
-#endif
         techo_client_close();
     }
 
     techo_client_vars.rcvd_so_far += read;
-    if (read > 0) {
-#ifdef SIM_DEBUG
-        printf("Echo reply received (size: %d)\n", techo_client_vars.msg_size);
-#endif
-    }
 
     if (techo_client_vars.rcvd_so_far == techo_client_vars.msg_size) {
         techo_client_change_state(TECHO_CLI_SENDING);
@@ -212,11 +195,6 @@ void techo_client_connect() {
 void techo_client_close() {
     opentimers_cancel(techo_client_vars.tid);
     opentimers_destroy(techo_client_vars.tid);
-
-#ifdef SIM_DEBUG
-    printf("Killing application\n");
-#endif
-
     opentcp_close(&techo_client_vars.socket);
     opentcp_unregister(&techo_client_vars.socket);
 }
