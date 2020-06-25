@@ -45,7 +45,7 @@ owerror_t cjoin_receive(OpenQueueEntry_t *msg,
                         coap_option_iht *coap_outgoingOptions,
                         uint8_t *coap_outgoingOptionsLen);
 
-void cjoin_timer_cb(opentimers_id_t id);
+void cjoin_timer_cb(void* arg);
 
 void cjoin_task_cb(void);
 
@@ -54,7 +54,7 @@ void cjoin_sendDone(OpenQueueEntry_t *msg,
 
 owerror_t cjoin_sendJoinRequest(open_addr_t *joinProxy);
 
-void cjoin_retransmission_cb(opentimers_id_t id);
+void cjoin_retransmission_cb(void* arg);
 
 void cjoin_retransmission_task_cb(void);
 
@@ -158,15 +158,15 @@ owerror_t cjoin_receive(OpenQueueEntry_t *msg,
     return E_FAIL;
 }
 
-void cjoin_timer_cb(opentimers_id_t id) {
-    (void) id;
+void cjoin_timer_cb(void* arg) {
+    (void) arg;
     // calling the task directly as the timer_cb function is executed in
     // task mode by opentimer already
     cjoin_task_cb();
 }
 
-void cjoin_retransmission_cb(opentimers_id_t id) {
-    (void) id;
+void cjoin_retransmission_cb(void* arg) {
+    (void) arg;
     // calling the task directly as the timer_cb function is executed in
     // task mode by opentimer already
     opentimers_scheduleIn(

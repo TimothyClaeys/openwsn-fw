@@ -122,7 +122,7 @@ static void prepend_fragn_header(OpenQueueEntry_t *fragn, uint16_t size, uint16_
 
 static void fast_forward_frags(uint16_t tag, uint16_t size, uint8_t vrb_pos);
 
-void frag_timeout_cb(opentimers_id_t id);
+void frag_timeout_cb(void *arg);
 
 owerror_t frag_timerq_enqueue(opentimers_id_t id);
 
@@ -790,7 +790,9 @@ owerror_t frag_timerq_remove(opentimers_id_t id) {
     return E_FAIL;
 }
 
-void frag_timeout_cb(opentimers_id_t id) {
+void frag_timeout_cb(void* arg) {
+    (void) arg;
+
     uint32_t j;
     opentimers_id_t expired_timer;
 

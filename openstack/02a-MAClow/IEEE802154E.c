@@ -179,11 +179,11 @@ void changeState(ieee154eState_t newstate);
 void endSlot(void);
 
 // interrupts
-void isr_ieee154e_newSlot(opentimers_id_t id);
+void isr_ieee154e_newSlot(void *arg);
 
-void isr_ieee154e_timer(opentimers_id_t id);
+void isr_ieee154e_timer(void *arg);
 
-void isr_ieee154e_inhibitStart(opentimers_id_t id);
+void isr_ieee154e_inhibitStart(void *arg);
 
 // status printing
 static bool statusPrint_asn(void);
@@ -385,8 +385,8 @@ void ieee154e_orderToASNStructure(uint8_t *in, asn_t *val_asn) {
 
 This function executes in ISR mode, when the new slot timer fires.
 */
-void isr_ieee154e_newSlot(opentimers_id_t id) {
-    (void) id;
+void isr_ieee154e_newSlot(void *arg) {
+    (void)arg;
 
 #if PYTHON_BOARD
     board_barrier_slot_sync();
@@ -428,8 +428,8 @@ void isr_ieee154e_newSlot(opentimers_id_t id) {
 
 This function executes in ISR mode, when the FSM timer fires.
 */
-void isr_ieee154e_timer(opentimers_id_t id) {
-    (void) id;
+void isr_ieee154e_timer(void *arg) {
+    (void)arg;
 
     switch (ieee154e_vars.state) {
         case S_TXDATAOFFSET:
@@ -512,9 +512,8 @@ This needs to happen
 
 This function executes in ISR mode.
 */
-void isr_ieee154e_inhibitStart(opentimers_id_t id) {
-    (void) id;
-
+void isr_ieee154e_inhibitStart(void *arg) {
+    (void)arg;
     // inhibit serial activity
     openserial_inhibitStart(); // activity_inhibitSerial
 }

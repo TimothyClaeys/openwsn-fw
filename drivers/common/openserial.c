@@ -52,9 +52,9 @@ void inputHdlcWrite(uint8_t b);
 void inputHdlcClose(void);
 
 // task
-void task_printWrongCRCInput(void* arg);
+void task_printWrongCRCInput(void *arg);
 
-void task_printInputBufferOverflow(void* arg);
+void task_printInputBufferOverflow(void *arg);
 
 void task_statusPrint(void);
 
@@ -725,15 +725,15 @@ port_INLINE void inputHdlcClose(void) {
 
 //=========================== task ============================================
 
-void task_printInputBufferOverflow(void* arg) {
-    (void)arg;
+void task_printInputBufferOverflow(void *arg) {
+    (void) arg;
 
     // input buffer overflow
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_BUFFER_OVERFLOW, (errorparameter_t) 0, (errorparameter_t) 0);
 }
 
-void task_printWrongCRCInput(void* arg) {
-    (void)arg;
+void task_printWrongCRCInput(void *arg) {
+    (void) arg;
 
     // invalid HDLC frame
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_WRONG_CRC_INPUT, (errorparameter_t) 0, (errorparameter_t) 0);

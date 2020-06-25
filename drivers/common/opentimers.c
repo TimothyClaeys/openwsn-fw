@@ -45,6 +45,7 @@ opentimers_id_t opentimers_create(uint8_t timer_id, uint8_t task_prio) {
     if (timer_id == TIMER_TSCH || timer_id == TIMER_INHIBIT) {
         if (opentimers_vars.timersBuf[timer_id].isUsed == FALSE) {
             opentimers_vars.timersBuf[timer_id].isUsed = TRUE;
+            opentimers_vars.timersBuf[timer_id].timer_id = timer_id;
             // the TSCH timer and inhibit timer won't push a task,
             // hence task_prio is not used
             ENABLE_INTERRUPTS();
@@ -57,6 +58,7 @@ opentimers_id_t opentimers_create(uint8_t timer_id, uint8_t task_prio) {
             if (opentimers_vars.timersBuf[id].isUsed == FALSE) {
                 opentimers_vars.timersBuf[id].isUsed = TRUE;
                 opentimers_vars.timersBuf[id].timer_task_prio = task_prio;
+                opentimers_vars.timersBuf[id].timer_id = id;
                 ENABLE_INTERRUPTS();
                 return id;
             }
@@ -314,13 +316,14 @@ void opentimers_timer_callback(void) {
                     if (i == TIMER_TSCH) {
                         opentimers_vars.insideISR = TRUE;
                         opentimers_vars.timersBuf[i].isRunning = FALSE;
-                        opentimers_vars.timersBuf[i].callback(i);
+                        opentimers_vars.timersBuf[i].callback((void*) &opentimers_vars.timersBuf[i].timer_id);
                         opentimers_vars.insideISR = FALSE;
                     } else {
                         if (opentimers_vars.timersBuf[i].wraps_remaining == 0) {
                             opentimers_vars.timersBuf[i].isRunning = FALSE;
                             scheduler_push_task((task_cbt)(opentimers_vars.timersBuf[i].callback),
-                                                (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio, NULL);
+                                                (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio,
+                                                (void*) &opentimers_vars.timersBuf[i].timer_id);
                             if (opentimers_vars.timersBuf[i].timerType == TIMER_PERIODIC) {
                                 opentimers_vars.insideISR = TRUE;
                                 opentimers_scheduleIn(
@@ -344,7 +347,7 @@ void opentimers_timer_callback(void) {
                                     opentimers_vars.timersBuf[i].isRunning = FALSE;
                                     scheduler_push_task((task_cbt)(opentimers_vars.timersBuf[i].callback),
                                                         (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio,
-                                                        NULL);
+                                                        (void*) &opentimers_vars.timersBuf[i].timer_id);
                                     if (opentimers_vars.timersBuf[i].timerType == TIMER_PERIODIC) {
                                         opentimers_vars.insideISR = TRUE;
                                         opentimers_scheduleIn(

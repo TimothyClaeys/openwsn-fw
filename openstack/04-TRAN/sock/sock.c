@@ -144,7 +144,7 @@ int sock_udp_send(sock_udp_t *sock, const void *data, size_t len, const sock_udp
 
     memcpy(pkt->payload, data, len);
 
-    scheduler_push_task(_sock_transmit_internal, TASKPRIO_UDP);
+    scheduler_push_task(_sock_transmit_internal, TASKPRIO_UDP, NULL);
 
     pkt->l4_payload = pkt->payload;
     pkt->l4_length = pkt->length;
@@ -229,7 +229,9 @@ int sock_udp_recv(sock_udp_t *sock, void *data, size_t max_len, uint32_t timeout
     return bytes_to_copy;
 }
 
-void sock_receive_internal(void) {
+void sock_receive_internal(void* arg) {
+    (void) arg;
+
     OpenQueueEntry_t *pkt;
     sock_udp_t *current;
 

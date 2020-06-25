@@ -83,6 +83,8 @@ void scheduler_start(void) {
 }
 
 void scheduler_push_task(task_cbt cb, task_prio_t prio, void* arg) {
+    (void) arg;
+    
     taskList_item_t *taskContainer;
     taskList_item_t **taskListWalker;
 

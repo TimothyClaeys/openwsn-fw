@@ -25,7 +25,7 @@ void udp_receive(OpenQueueEntry_t *msg) {
 
     // verify checksum
 
-    scheduler_push_task(sock_receive_internal, TASKPRIO_UDP);
+    scheduler_push_task(sock_receive_internal, TASKPRIO_UDP, NULL);
 
     packetfunctions_tossHeader(&msg, sizeof(udp_ht));
     msg->l4_length = msg->length;
