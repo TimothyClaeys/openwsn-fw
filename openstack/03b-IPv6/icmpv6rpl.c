@@ -26,14 +26,14 @@ icmpv6rpl_vars_t icmpv6rpl_vars;
 //=========================== prototypes ======================================
 
 // DIO-related
-void icmpv6rpl_timer_DIO_cb(opentimers_id_t id);
+void icmpv6rpl_timer_DIO_cb(void* arg);
 
 void icmpv6rpl_timer_DIO_task(void);
 
 void sendDIO(void);
 
 // DAO-related
-void icmpv6rpl_timer_DAO_cb(opentimers_id_t id);
+void icmpv6rpl_timer_DAO_cb(void* arg);
 
 void icmpv6rpl_timer_DAO_task(void);
 
@@ -646,7 +646,8 @@ void icmpv6rpl_killPreferredParent(void) {
 \note This timer callback function is executed in task mode by opentimer
     already. No need to push a task again.
 */
-void icmpv6rpl_timer_DIO_cb(opentimers_id_t id) {
+void icmpv6rpl_timer_DIO_cb(void* arg) {
+    (void) arg;
     icmpv6rpl_timer_DIO_task();
 }
 
@@ -812,8 +813,8 @@ void sendDIO(void) {
 \note This timer callback function is executed in task mode by opentimer
     already. No need to push a task again.
 */
-void icmpv6rpl_timer_DAO_cb(opentimers_id_t id) {
-
+void icmpv6rpl_timer_DAO_cb(void* arg) {
+    (void) arg;
     icmpv6rpl_timer_DAO_task();
 }
 

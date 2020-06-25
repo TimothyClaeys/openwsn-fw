@@ -34,7 +34,7 @@
 #define SPLITE_TIMER_DURATION     15 // in ticks
 #define PRE_CALL_TIMER_WINDOW     PORT_TsSlotDuration
 
-typedef void (*opentimers_cbt)(opentimers_id_t id);
+typedef void (*opentimers_cbt)(void *arg);
 
 //=========================== typedef =========================================
 
@@ -49,6 +49,7 @@ typedef enum {
 } time_type_t;
 
 typedef struct {
+    uint8_t timer_id;                           // timer id
     uint32_t duration;                          // the duration that set by timer, in ticks
     PORT_TIMER_WIDTH currentCompareValue;       // the current compare value
     uint16_t wraps_remaining;                   // the number of wraps timer is going to be fired after
