@@ -320,7 +320,7 @@ void opentimers_timer_callback(void) {
                         if (opentimers_vars.timersBuf[i].wraps_remaining == 0) {
                             opentimers_vars.timersBuf[i].isRunning = FALSE;
                             scheduler_push_task((task_cbt)(opentimers_vars.timersBuf[i].callback),
-                                                (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio);
+                                                (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio, NULL);
                             if (opentimers_vars.timersBuf[i].timerType == TIMER_PERIODIC) {
                                 opentimers_vars.insideISR = TRUE;
                                 opentimers_scheduleIn(
@@ -343,7 +343,8 @@ void opentimers_timer_callback(void) {
                                     // pre-call the timer here if it will be fired within PRE_CALL_TIMER_WINDOW, when wraps_remaining decrease to 0
                                     opentimers_vars.timersBuf[i].isRunning = FALSE;
                                     scheduler_push_task((task_cbt)(opentimers_vars.timersBuf[i].callback),
-                                                        (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio);
+                                                        (task_prio_t) opentimers_vars.timersBuf[i].timer_task_prio,
+                                                        NULL);
                                     if (opentimers_vars.timersBuf[i].timerType == TIMER_PERIODIC) {
                                         opentimers_vars.insideISR = TRUE;
                                         opentimers_scheduleIn(

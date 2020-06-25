@@ -72,9 +72,9 @@ void inputHdlcWrite(uint8_t b);
 void inputHdlcClose(void);
 
 // task
-void task_printWrongCRCInput(void);
+void task_printWrongCRCInput(void* arg);
 
-void task_printInputBufferOverflow(void);
+void task_printInputBufferOverflow(void* arg);
 
 //=========================== public ==========================================
 
@@ -741,12 +741,16 @@ port_INLINE void inputHdlcClose(void) {
 
 //=========================== task ============================================
 
-void task_printInputBufferOverflow(void) {
+void task_printInputBufferOverflow(void* arg) {
+    (void)arg;
+
     // input buffer overflow
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_BUFFER_OVERFLOW, (errorparameter_t) 0, (errorparameter_t) 0);
 }
 
-void task_printWrongCRCInput(void) {
+void task_printWrongCRCInput(void* arg) {
+    (void)arg;
+
     // invalid HDLC frame
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_WRONG_CRC_INPUT, (errorparameter_t) 0, (errorparameter_t) 0);
 }
@@ -825,7 +829,7 @@ uint8_t isr_openserial_rx(void) {
         inputHdlcWrite(rxbyte);
         if (openserial_vars.inputBufFillLevel + 1 > SERIAL_INPUT_BUFFER_SIZE) {
             // push task
-            scheduler_push_task(task_printInputBufferOverflow, TASKPRIO_OPENSERIAL);
+            scheduler_push_task(task_printInputBufferOverflow, TASKPRIO_OPENSERIAL, NULL);
             openserial_vars.inputBufFillLevel = 0;
             openserial_vars.hdlcBusyReceiving = FALSE;
         }
@@ -841,7 +845,7 @@ uint8_t isr_openserial_rx(void) {
 
         if (openserial_vars.inputBufFillLevel == 0) {
             // push task
-            scheduler_push_task(task_printWrongCRCInput, TASKPRIO_OPENSERIAL);
+            scheduler_push_task(task_printWrongCRCInput, TASKPRIO_OPENSERIAL, NULL);
         } else {
             openserial_handleRxFrame();
             openserial_vars.inputBufFillLevel = 0;
