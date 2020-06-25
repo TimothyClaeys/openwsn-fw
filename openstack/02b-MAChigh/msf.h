@@ -62,10 +62,7 @@ void msf_init(void);
 
 uint8_t msf_getsfid(void);
 
-bool msf_candidateAddCellList(
-        cellInfo_ht *cellList,
-        uint8_t requiredCells
-);
+bool msf_candidateAddCellList(cellInfo_ht *cellList, uint8_t requiredCells);
 
 bool msf_candidateRemoveCellList(
         cellInfo_ht *cellList,

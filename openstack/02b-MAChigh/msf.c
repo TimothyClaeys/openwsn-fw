@@ -34,12 +34,12 @@ void msf_timer_housekeeping_task(void);
 
 void msf_timer_waitretry_cb(opentimers_id_t id);
 
-void msf_timer_clear_task(void);
+void msf_timer_clear_task(void* arg);
 
 // msf private
-void msf_trigger6pAdd(void);
+void msf_trigger6pAdd(void* arg);
 
-void msf_trigger6pDelete(void);
+void msf_trigger6pDelete(void* arg);
 
 void msf_housekeeping(void);
 
@@ -116,11 +116,11 @@ void msf_updateCellsElapsed(open_addr_t *neighbor, cellType_t type) {
 
         if (msf_vars.numCellsUsed_tx > LIM_NUMCELLSUSED_HIGH) {
             msf_vars.needAddTx = TRUE;
-            scheduler_push_task(msf_trigger6pAdd, TASKPRIO_MSF);
+            scheduler_push_task(msf_trigger6pAdd, TASKPRIO_MSF, NULL);
         }
         if (msf_vars.numCellsUsed_tx < LIM_NUMCELLSUSED_LOW) {
             msf_vars.needDeleteTx = TRUE;
-            scheduler_push_task(msf_trigger6pDelete, TASKPRIO_MSF);
+            scheduler_push_task(msf_trigger6pDelete, TASKPRIO_MSF, NULL);
         }
         msf_vars.numCellsElapsed_tx = 0;
         msf_vars.numCellsUsed_tx = 0;
@@ -145,11 +145,11 @@ void msf_updateCellsElapsed(open_addr_t *neighbor, cellType_t type) {
 
         if (msf_vars.numCellsUsed_rx > LIM_NUMCELLSUSED_HIGH) {
             msf_vars.needAddRx = TRUE;
-            scheduler_push_task(msf_trigger6pAdd, TASKPRIO_MSF);
+            scheduler_push_task(msf_trigger6pAdd, TASKPRIO_MSF, NULL);
         }
         if (msf_vars.numCellsUsed_rx < LIM_NUMCELLSUSED_LOW) {
             msf_vars.needDeleteRx = TRUE;
-            scheduler_push_task(msf_trigger6pDelete, TASKPRIO_MSF);
+            scheduler_push_task(msf_trigger6pDelete, TASKPRIO_MSF, NULL);
         }
         msf_vars.numCellsElapsed_rx = 0;
         msf_vars.numCellsUsed_rx = 0;
@@ -212,7 +212,7 @@ void msf_handleRCError(uint8_t code, open_addr_t *address) {
 
     if (code == IANA_6TOP_RC_SEQNUM_ERR || code == IANA_6TOP_RC_CELLLIST_ERR) {
         // clear
-        scheduler_push_task(msf_timer_clear_task, TASKPRIO_MSF);
+        scheduler_push_task(msf_timer_clear_task, TASKPRIO_MSF, NULL);
     }
 
     if (code == IANA_6TOP_RC_BUSY) {
@@ -246,7 +246,8 @@ void msf_timer_housekeeping_task(void) {
     msf_housekeeping();
 }
 
-void msf_timer_clear_task(void) {
+void msf_timer_clear_task(void *arg) {
+    (void)arg;
     open_addr_t neighbor;
     bool foundNeighbor;
 
@@ -271,7 +272,8 @@ void msf_timer_clear_task(void) {
 
 //=========================== private =========================================
 
-void msf_trigger6pAdd(void) {
+void msf_trigger6pAdd(void* arg) {
+    (void)arg;
     open_addr_t neighbor;
     bool foundNeighbor;
     cellInfo_ht celllist_add[CELLLIST_MAX_LEN];
@@ -323,7 +325,8 @@ void msf_trigger6pAdd(void) {
     );
 }
 
-void msf_trigger6pDelete(void) {
+void msf_trigger6pDelete(void* arg) {
+    (void)arg;
     open_addr_t neighbor;
     bool foundNeighbor;
     cellInfo_ht celllist_delete[CELLLIST_MAX_LEN];
@@ -481,7 +484,7 @@ void msf_housekeeping(void) {
 
     if (schedule_getNumberOfNegotiatedCells(&parentNeighbor, CELLTYPE_TX) == 0) {
         msf_vars.needAddTx = TRUE;
-        msf_trigger6pAdd();
+        msf_trigger6pAdd(NULL);
         return;
     }
 
