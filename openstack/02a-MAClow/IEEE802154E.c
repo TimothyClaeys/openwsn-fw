@@ -2793,7 +2793,7 @@ void notif_sendDone(OpenQueueEntry_t *packetSent, owerror_t error) {
     // associate this packet with the virtual component COMPONENT_IEEE802154E_TO_RES so RES can knows it's for it
     packetSent->owner = COMPONENT_IEEE802154E_TO_SIXTOP;
     // post RES's sendDone task
-    scheduler_push_task(task_sixtopNotifSendDone, TASKPRIO_SIXTOP_NOTIF_TXDONE);
+    scheduler_push_task(task_sixtopNotifSendDone, TASKPRIO_SIXTOP_NOTIF_TXDONE, NULL);
     // wake up the scheduler
     SCHEDULER_WAKEUP();
 }
@@ -2807,7 +2807,7 @@ void notif_receive(OpenQueueEntry_t *packetReceived) {
     // COMPONENT_IEEE802154E_TO_SIXTOP so sixtop can knows it's for it
     packetReceived->owner = COMPONENT_IEEE802154E_TO_SIXTOP;
     // post RES's Receive task
-    scheduler_push_task(task_sixtopNotifReceive, TASKPRIO_SIXTOP_NOTIF_RX);
+    scheduler_push_task(task_sixtopNotifReceive, TASKPRIO_SIXTOP_NOTIF_RX, NULL);
     // wake up the scheduler
     SCHEDULER_WAKEUP();
 }

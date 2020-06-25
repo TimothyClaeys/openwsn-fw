@@ -39,7 +39,7 @@ typedef enum {
 
 // =========================== typedef =========================================
 
-typedef void (*task_cbt)(void);
+typedef void (*task_cbt)(void* arg);
 
 // =========================== prototypes ======================================
 void scheduler_init(void);
@@ -54,13 +54,13 @@ void scheduler_stop(void);
 _Noreturn void  scheduler_start(void);
 #endif
 
-void scheduler_push_task(task_cbt task_cb, task_prio_t prio);
+void scheduler_push_task(task_cbt task_cb, task_prio_t prio, void *arg);
 
 #if SCHEDULER_DEBUG_ENABLE
 uint8_t scheduler_debug_get_TasksCur(void);
 uint8_t scheduler_debug_get_TasksMax(void);
 
-#endif
+#endif /* OPENWSN_SCHEDULER_H */
 
 #include "openos/scheduler_types.h"
 

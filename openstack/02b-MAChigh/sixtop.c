@@ -397,7 +397,8 @@ owerror_t sixtop_send(OpenQueueEntry_t *msg) {
 
 //======= from lower layer
 
-void task_sixtopNotifSendDone(void) {
+void task_sixtopNotifSendDone(void* arg) {
+    (void)arg;
     OpenQueueEntry_t *msg;
 
     // get recently-sent packet from openqueue
@@ -456,7 +457,9 @@ void task_sixtopNotifSendDone(void) {
     }
 }
 
-void task_sixtopNotifReceive(void) {
+void task_sixtopNotifReceive(void* arg) {
+    (void)arg;
+
     OpenQueueEntry_t *msg;
     uint16_t lenIE;
 

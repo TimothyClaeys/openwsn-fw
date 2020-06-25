@@ -66,7 +66,7 @@ void scheduler_start(void) {
             ENABLE_INTERRUPTS();
 
             // execute the current task
-            pThisTask->cb();
+            pThisTask->cb(pThisTask->arg);
 
             // free up this task container
             pThisTask->cb = NULL;
@@ -82,7 +82,7 @@ void scheduler_start(void) {
     }
 }
 
-void scheduler_push_task(task_cbt cb, task_prio_t prio) {
+void scheduler_push_task(task_cbt cb, task_prio_t prio, void* arg) {
     taskList_item_t *taskContainer;
     taskList_item_t **taskListWalker;
 
@@ -109,12 +109,14 @@ void scheduler_push_task(task_cbt cb, task_prio_t prio) {
     // fill that task container with this task
     taskContainer->cb = cb;
     taskContainer->prio = prio;
+    taskContainer->arg = arg;
 
     // find position in queue
     taskListWalker = &scheduler_vars.task_list;
     while (*taskListWalker != NULL && (*taskListWalker)->prio <= taskContainer->prio) {
         taskListWalker = (taskList_item_t **) &((*taskListWalker)->next);
     }
+
     // insert at that position
     taskContainer->next = *taskListWalker;
     *taskListWalker = taskContainer;
@@ -122,8 +124,8 @@ void scheduler_push_task(task_cbt cb, task_prio_t prio) {
 
 #if SCHEDULER_DEBUG_ENABLE
     scheduler_dbg.numTasksCur++;
-    if (scheduler_dbg.numTasksCur>scheduler_dbg.numTasksMax) {
-        scheduler_dbg.numTasksMax   = scheduler_dbg.numTasksCur;
+    if (scheduler_dbg.numTasksCur > scheduler_dbg.numTasksMax) {
+        scheduler_dbg.numTasksMax = scheduler_dbg.numTasksCur;
     }
 #endif
 

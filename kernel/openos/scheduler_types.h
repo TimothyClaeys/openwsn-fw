@@ -11,14 +11,15 @@
 #include "opendefs.h"
 
 typedef struct task_llist_t {
-   task_cbt                       cb;
-   task_prio_t                    prio;
-   void*                          next;
+    task_cbt cb;
+    task_prio_t prio;
+    void *arg;
+    void *next;
 } taskList_item_t;
 
 typedef struct {
-   taskList_item_t                taskBuf[TASK_LIST_DEPTH];
-   taskList_item_t*               task_list;
+    taskList_item_t taskBuf[TASK_LIST_DEPTH];
+    taskList_item_t *task_list;
 } scheduler_vars_t;
 
 #if SCHEDULER_DEBUG_ENABLE

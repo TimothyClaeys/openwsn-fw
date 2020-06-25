@@ -33,9 +33,9 @@ void handleRxFrame(void);
 void handleEcho(uint8_t *buffer, uint8_t bufLen);
 
 // misc
-void statusPrint_timerCb(opentimers_id_t id);
+void statusPrint_timerCb(void *arg);
 
-void board_resetCb(opentimers_id_t id);
+void board_resetCb(void *arg);
 
 // HDLC output
 void outputHdlcOpen(void);
@@ -52,9 +52,9 @@ void inputHdlcWrite(uint8_t b);
 void inputHdlcClose(void);
 
 // task
-void task_printWrongCRCInput(void);
+void task_printWrongCRCInput(void* arg);
 
-void task_printInputBufferOverflow(void);
+void task_printInputBufferOverflow(void* arg);
 
 void task_statusPrint(void);
 
@@ -588,15 +588,15 @@ void handleEcho(uint8_t *buffer, uint8_t bufLen) {
 
 //===== misc
 
-void statusPrint_timerCb(opentimers_id_t id) {
-    (void) id;
-
-    // calling the task directly since the timer_cb function is executed in task mode by opentimer already
+void statusPrint_timerCb(void *arg) {
+    (void) arg;
+    // calling the task directly as the timer_cb function is executed in
+    // task mode by opentimer already
     task_statusPrint();
 }
 
-void board_resetCb(opentimers_id_t id) {
-    (void) id;
+void board_resetCb(void *arg) {
+    (void) arg;
     board_reset();
 }
 
@@ -725,12 +725,16 @@ port_INLINE void inputHdlcClose(void) {
 
 //=========================== task ============================================
 
-void task_printInputBufferOverflow(void) {
+void task_printInputBufferOverflow(void* arg) {
+    (void)arg;
+
     // input buffer overflow
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_BUFFER_OVERFLOW, (errorparameter_t) 0, (errorparameter_t) 0);
 }
 
-void task_printWrongCRCInput(void) {
+void task_printWrongCRCInput(void* arg) {
+    (void)arg;
+
     // invalid HDLC frame
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_WRONG_CRC_INPUT, (errorparameter_t) 0, (errorparameter_t) 0);
 }
@@ -804,7 +808,7 @@ uint8_t isr_rxByte(void) {
         inputHdlcWrite(rxbyte);
         if (openserial_vars.inputBufFillLevel + 1 > SERIAL_INPUT_BUFFER_SIZE) {
             // push task
-            scheduler_push_task(task_printInputBufferOverflow, TASKPRIO_OPENSERIAL);
+            scheduler_push_task(task_printInputBufferOverflow, TASKPRIO_OPENSERIAL, NULL);
             openserial_vars.inputBufFillLevel = 0;
             openserial_vars.hdlcBusyReceiving = FALSE;
         }
@@ -817,7 +821,7 @@ uint8_t isr_rxByte(void) {
 
         if (openserial_vars.inputBufFillLevel == 0) {
             // push task
-            scheduler_push_task(task_printWrongCRCInput, TASKPRIO_OPENSERIAL);
+            scheduler_push_task(task_printWrongCRCInput, TASKPRIO_OPENSERIAL, NULL);
         } else {
             handleRxFrame();
             openserial_vars.inputBufFillLevel = 0;

@@ -148,9 +148,9 @@ owerror_t sixtop_request(
 owerror_t sixtop_send(OpenQueueEntry_t *msg);
 
 // from lower layer
-void task_sixtopNotifSendDone(void);
+void task_sixtopNotifSendDone(void* arg);
 
-void task_sixtopNotifReceive(void);
+void task_sixtopNotifReceive(void* arg);
 
 /**
 \}
