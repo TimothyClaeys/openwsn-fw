@@ -152,11 +152,11 @@ bool debugPrint_asn(void);
 bool debugPrint_isSync(void);
 
 // interrupts
-void isr_ieee154e_newSlot(opentimers_id_t id);
+void isr_ieee154e_newSlot(void *arg);
 
-void isr_ieee154e_timer(opentimers_id_t id);
+void isr_ieee154e_timer(void *arg);
 
-void isr_ieee154e_inhibitStart(opentimers_id_t id);
+void isr_ieee154e_inhibitStart(void *arg);
 
 //=========================== admin ===========================================
 
@@ -328,7 +328,8 @@ void ieee154e_orderToASNStructure(uint8_t *in, asn_t *val_asn) {
 
 This function executes in ISR mode, when the new slot timer fires.
 */
-void isr_ieee154e_newSlot(opentimers_id_t id) {
+void isr_ieee154e_newSlot(void *arg) {
+    (void)arg;
 
     ieee154e_vars.startOfSlotReference = opentimers_getCurrentCompareValue();
 
@@ -364,7 +365,9 @@ void isr_ieee154e_newSlot(opentimers_id_t id) {
 
 This function executes in ISR mode, when the FSM timer fires.
 */
-void isr_ieee154e_timer(opentimers_id_t id) {
+void isr_ieee154e_timer(void *arg) {
+    (void)arg;
+
     switch (ieee154e_vars.state) {
         case S_TXDATAOFFSET:
             activity_ti2();
@@ -447,7 +450,8 @@ This needs to happen
 
 This function executes in ISR mode.
 */
-void isr_ieee154e_inhibitStart(opentimers_id_t id) {
+void isr_ieee154e_inhibitStart(void *arg) {
+    (void)arg;
     // inhibit serial activity
     openserial_inhibitStart(); // activity_inhibitSerial
 }

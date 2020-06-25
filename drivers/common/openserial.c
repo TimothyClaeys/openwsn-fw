@@ -53,9 +53,9 @@ void openserial_handleRxFrame(void);
 void openserial_handleEcho(uint8_t *but, uint8_t bufLen);
 
 // misc
-void openserial_debugPrint_timer_cb(opentimers_id_t id);
+void openserial_debugPrint_timer_cb(void *arg);
 
-void openserial_board_reset_cb(opentimers_id_t id);
+void openserial_board_reset_cb(void *arg);
 
 // HDLC output
 void outputHdlcOpen(void);
@@ -72,9 +72,9 @@ void inputHdlcWrite(uint8_t b);
 void inputHdlcClose(void);
 
 // task
-void task_printWrongCRCInput(void* arg);
+void task_printWrongCRCInput(void *arg);
 
-void task_printInputBufferOverflow(void* arg);
+void task_printInputBufferOverflow(void *arg);
 
 //=========================== public ==========================================
 
@@ -606,14 +606,15 @@ void openserial_handleEcho(uint8_t *buf, uint8_t bufLen) {
 
 //===== misc
 
-void openserial_debugPrint_timer_cb(opentimers_id_t id) {
+void openserial_debugPrint_timer_cb(void *arg) {
+    (void) arg;
     // calling the task directly as the timer_cb function is executed in
     // task mode by opentimer already
     task_openserial_debugPrint();
 }
 
-void openserial_board_reset_cb(opentimers_id_t id) {
-    (void) id;
+void openserial_board_reset_cb(void *arg) {
+    (void) arg;
     board_reset();
 }
 
@@ -741,15 +742,15 @@ port_INLINE void inputHdlcClose(void) {
 
 //=========================== task ============================================
 
-void task_printInputBufferOverflow(void* arg) {
-    (void)arg;
+void task_printInputBufferOverflow(void *arg) {
+    (void) arg;
 
     // input buffer overflow
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_BUFFER_OVERFLOW, (errorparameter_t) 0, (errorparameter_t) 0);
 }
 
-void task_printWrongCRCInput(void* arg) {
-    (void)arg;
+void task_printWrongCRCInput(void *arg) {
+    (void) arg;
 
     // invalid HDLC frame
     LOG_ERROR(COMPONENT_OPENSERIAL, ERR_WRONG_CRC_INPUT, (errorparameter_t) 0, (errorparameter_t) 0);

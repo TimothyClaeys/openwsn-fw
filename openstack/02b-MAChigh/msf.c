@@ -28,11 +28,11 @@ metadata_t msf_translateMetadata(void);
 
 void msf_handleRCError(uint8_t code, open_addr_t *address);
 
-void msf_timer_housekeeping_cb(opentimers_id_t id);
+void msf_timer_housekeeping_cb(void* arg);
 
 void msf_timer_housekeeping_task(void);
 
-void msf_timer_waitretry_cb(opentimers_id_t id);
+void msf_timer_waitretry_cb(void* arg);
 
 void msf_timer_clear_task(void* arg);
 
@@ -223,11 +223,13 @@ void msf_handleRCError(uint8_t code, open_addr_t *address) {
     neighbors_updateSequenceNumber(address);
 }
 
-void msf_timer_waitretry_cb(opentimers_id_t id) {
+void msf_timer_waitretry_cb(void* arg) {
+    (void) arg;
     msf_vars.waitretry = FALSE;
 }
 
-void msf_timer_housekeeping_cb(opentimers_id_t id) {
+void msf_timer_housekeeping_cb(void* arg) {
+    (void) arg;
     PORT_TIMER_WIDTH newDuration;
 
     // update the timer period
@@ -247,7 +249,7 @@ void msf_timer_housekeeping_task(void) {
 }
 
 void msf_timer_clear_task(void *arg) {
-    (void)arg;
+    (void) arg;
     open_addr_t neighbor;
     bool foundNeighbor;
 
