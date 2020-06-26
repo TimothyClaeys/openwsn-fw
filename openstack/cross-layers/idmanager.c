@@ -19,7 +19,7 @@ void idmanager_init(void) {
 
     // reset local variables
     memset(&idmanager_vars, 0, sizeof(idmanager_vars_t));
-    // this is used to not wakeup in non-activeslot
+    // this is used to not wakeup in non-active slot
     idmanager_vars.slotSkip = FALSE;
 
     // isDAGroot
@@ -33,7 +33,7 @@ void idmanager_init(void) {
     idmanager_vars.myPANID.type = ADDR_PANID;
 #ifdef PANID_DEFINED
     idmanager_vars.myPANID.panid[0] = PANID_DEFINED & 0x00ff;
-    idmanager_vars.myPANID.panid[1] =(PANID_DEFINED & 0xff00)>>8;
+    idmanager_vars.myPANID.panid[1] = (PANID_DEFINED & 0xff00) >> 8;
 #else
     idmanager_vars.myPANID.panid[0] = 0xca;
     idmanager_vars.myPANID.panid[1] = 0xfe;
@@ -41,14 +41,14 @@ void idmanager_init(void) {
     // myPrefix
     idmanager_vars.myPrefix.type = ADDR_PREFIX;
 #ifdef DAGROOT
-    idmanager_vars.myPrefix.prefix[0]  = 0xbb;
-    idmanager_vars.myPrefix.prefix[1]  = 0xbb;
-    idmanager_vars.myPrefix.prefix[2]  = 0x00;
-    idmanager_vars.myPrefix.prefix[3]  = 0x00;
-    idmanager_vars.myPrefix.prefix[4]  = 0x00;
-    idmanager_vars.myPrefix.prefix[5]  = 0x00;
-    idmanager_vars.myPrefix.prefix[6]  = 0x00;
-    idmanager_vars.myPrefix.prefix[7]  = 0x00;
+    idmanager_vars.myPrefix.prefix[0] = 0xbb;
+    idmanager_vars.myPrefix.prefix[1] = 0xbb;
+    idmanager_vars.myPrefix.prefix[2] = 0x00;
+    idmanager_vars.myPrefix.prefix[3] = 0x00;
+    idmanager_vars.myPrefix.prefix[4] = 0x00;
+    idmanager_vars.myPrefix.prefix[5] = 0x00;
+    idmanager_vars.myPrefix.prefix[6] = 0x00;
+    idmanager_vars.myPrefix.prefix[7] = 0x00;
 #else
     // set prefix to link-local
     idmanager_vars.myPrefix.prefix[0] = 0xfe;
@@ -232,7 +232,7 @@ void idmanager_triggerAboutRoot(void) {
             }
             break;
         default:
-            LOG_ERROR(COMPONENT_IDMANAGER, ERR_INVALID_PARAM, (errorparameter_t)0, (errorparameter_t)0);
+            LOG_ERROR(COMPONENT_IDMANAGER, ERR_INVALID_PARAM, (errorparameter_t) 0, (errorparameter_t) 0);
             return;
     }
 
