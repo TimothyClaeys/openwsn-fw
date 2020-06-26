@@ -286,7 +286,7 @@ owerror_t packetfunctions_writeAddress(OpenQueueEntry_t **msg, const open_addr_t
     }
 
     for (i = 0; i < address_length; i++) {
-        if (packetfunctions_reserveHeader(msg, sizeof(uint8_t)) == E_FAIL){
+        if (packetfunctions_reserveHeader(msg, sizeof(uint8_t)) == E_FAIL) {
             return E_FAIL;
         }
         if (littleEndian) {
@@ -390,7 +390,7 @@ owerror_t packetfunctions_reserveHeader(OpenQueueEntry_t **pkt, uint16_t header_
     // CRC is allocated with the reserveFooter call, so here the packet should never be greater than 125 bytes
     if ((*pkt)->length + header_length > available_bytes) {
         LOG_ERROR(COMPONENT_PACKETFUNCTIONS, ERR_PACKET_TOO_LONG,
-                  (errorparameter_t) (*pkt)->length,
+                  (errorparameter_t)(*pkt)->length,
                   (errorparameter_t) header_length);
         return E_FAIL;
     }
@@ -402,7 +402,7 @@ owerror_t packetfunctions_reserveHeader(OpenQueueEntry_t **pkt, uint16_t header_
     if ((uint8_t * )((*pkt)->payload) < (uint8_t * )((*pkt)->packet) ||
         (*pkt)->payload + (*pkt)->length > &(*pkt)->packet[IEEE802154_FRAME_SIZE]) {
         LOG_CRITICAL(COMPONENT_PACKETFUNCTIONS, ERR_PACKET_TOO_LONG,
-                     (errorparameter_t) (*pkt)->length,
+                     (errorparameter_t)(*pkt)->length,
                      (errorparameter_t) header_length);
         return E_FAIL;
     }
@@ -480,7 +480,7 @@ void packetfunctions_tossHeader(OpenQueueEntry_t **pkt, uint16_t header_length) 
     if ((uint8_t * )((*pkt)->payload + header_length) > &(*pkt)->packet[IEEE802154_FRAME_SIZE] ||
         (*pkt)->length - header_length < 0) {
         LOG_CRITICAL(COMPONENT_PACKETFUNCTIONS, ERR_PACKET_TOO_SHORT,
-                     (errorparameter_t) (*pkt)->length,
+                     (errorparameter_t)(*pkt)->length,
                      (errorparameter_t) header_length);
     }
 
@@ -495,7 +495,7 @@ owerror_t packetfunctions_reserveFooter(OpenQueueEntry_t **pkt, uint16_t footer_
     // function is only called from the MAC layer, there the packets should never be bigger than IEEE802154_FRAME_SIZE
     if ((*pkt)->length > IEEE802154_FRAME_SIZE) {
         LOG_ERROR(COMPONENT_PACKETFUNCTIONS, ERR_PACKET_TOO_LONG,
-                  (errorparameter_t) (*pkt)->length,
+                  (errorparameter_t)(*pkt)->length,
                   (errorparameter_t) footer_length);
         return E_FAIL;
     }
@@ -509,7 +509,7 @@ void packetfunctions_tossFooter(OpenQueueEntry_t **pkt, uint16_t footer_length) 
     // function is only called from the MAC layer
     if ((*pkt)->length < 0) {
         LOG_CRITICAL(COMPONENT_PACKETFUNCTIONS, ERR_PACKET_TOO_SHORT,
-                     (errorparameter_t) (*pkt)->length,
+                     (errorparameter_t)(*pkt)->length,
                      (errorparameter_t) footer_length);
     }
 }

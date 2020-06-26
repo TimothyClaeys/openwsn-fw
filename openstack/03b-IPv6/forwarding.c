@@ -299,15 +299,10 @@ void forwarding_receive(
     memcpy(&(msg->l3_destinationAdd), &ipv6_inner_header->dest, sizeof(open_addr_t));
     memcpy(&(msg->l3_sourceAdd), &ipv6_inner_header->src, sizeof(open_addr_t));
 
-    if (
-            (
-                    idmanager_isMyAddress(&(msg->l3_destinationAdd))
-                    ||
-                    packetfunctions_isBroadcastMulticast(&(msg->l3_destinationAdd))
-            )
-            &&
-            ipv6_outer_header->next_header != IANA_IPv6ROUTE
-            ) {
+    if ((idmanager_isMyAddress(&(msg->l3_destinationAdd)) ||
+         packetfunctions_isBroadcastMulticast(&(msg->l3_destinationAdd))) &&
+        ipv6_outer_header->next_header != IANA_IPv6ROUTE) {
+
         if (ipv6_outer_header->src.type != ADDR_NONE || ipv6_outer_header->rhe_length) {
             packetfunctions_tossHeader(&msg, ipv6_outer_header->header_length + ipv6_outer_header->rhe_length);
         }
@@ -325,9 +320,9 @@ void forwarding_receive(
                 break;
             default:
                 // log error
-                LOG_ERROR(COMPONENT_FORWARDING, ERR_WRONG_TRAN_PROTOCOL,
-                          (errorparameter_t) msg->l4_protocol,
-                          (errorparameter_t) 1);
+                LOG_WARNING(COMPONENT_FORWARDING, ERR_WRONG_TRAN_PROTOCOL,
+                            (errorparameter_t) msg->l4_protocol,
+                            (errorparameter_t) 1);
 
                 // free packet
                 openqueue_freePacketBuffer(msg);
