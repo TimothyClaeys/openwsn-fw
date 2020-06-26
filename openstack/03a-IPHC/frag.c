@@ -124,13 +124,6 @@ static void fast_forward_frags(uint16_t tag, uint16_t size, uint8_t vrb_pos);
 
 void frag_timeout_cb(void *arg);
 
-owerror_t frag_timerq_enqueue(opentimers_id_t id);
-
-owerror_t frag_timerq_remove(opentimers_id_t id);
-
-opentimers_id_t frag_timerq_dequeue(void);
-
-
 //============================= public ========================================
 
 void frag_init() {
@@ -439,11 +432,6 @@ void frag_receive(OpenQueueEntry_t *msg) {
 
                     opentimers_cancel(frag_vars.vrbs[i].forward_timer);
                     opentimers_destroy(frag_vars.vrbs[i].forward_timer);
-                    if (frag_timerq_remove(frag_vars.vrbs[i].forward_timer) == E_FAIL) {
-                        LOG_CRITICAL(COMPONENT_FRAG, ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER,
-                                     (errorparameter_t) 1,
-                                     (errorparameter_t) 0);
-                    }
                     memset(&frag_vars.vrbs[i], 0, sizeof(vrb_t));
 
                 }
@@ -469,7 +457,6 @@ void frag_receive(OpenQueueEntry_t *msg) {
 }
 
 //=========================== private =======================================
-
 
 static void cleanup_fragments(uint16_t datagram_tag) {
     uint32_t i;
@@ -517,11 +504,8 @@ static void store_fragment(OpenQueueEntry_t *msg, uint16_t size, uint16_t tag, u
                 frag_vars.fragmentBuf[i].reassembly_timer = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_FRAG);
 
                 // get a timer for the fragment reassembly and add it to the timer queue
-                if ((frag_vars.fragmentBuf[i].reassembly_timer == ERROR_NO_AVAILABLE_ENTRIES) ||
-                    (frag_timerq_enqueue(frag_vars.fragmentBuf[i].reassembly_timer) == E_FAIL)) {
-
-                    LOG_ERROR(COMPONENT_FRAG, ERR_NO_FREE_TIMER_OR_QUEUE_ENTRY,
-                              (errorparameter_t) 0, (errorparameter_t) 0);
+                if (frag_vars.fragmentBuf[i].reassembly_timer == ERROR_NO_AVAILABLE_ENTRIES) {
+                    LOG_ERROR(COMPONENT_FRAG, ERR_NO_FREE_TIMER, (errorparameter_t) 0, (errorparameter_t) 0);
                     RESET_FRAG_BUFFER_ENTRY(i);
                     return;
                 }
@@ -617,11 +601,6 @@ static void reassemble_fragments(uint16_t tag, uint16_t size, OpenQueueEntry_t *
             if (frag_vars.fragmentBuf[i].reassembly_timer != 0) {
                 opentimers_cancel(frag_vars.fragmentBuf[i].reassembly_timer);
                 opentimers_destroy(frag_vars.fragmentBuf[i].reassembly_timer);
-                if (frag_timerq_remove(frag_vars.fragmentBuf[i].reassembly_timer) == E_FAIL) {
-                    LOG_CRITICAL(COMPONENT_FRAG, ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER,
-                                 (errorparameter_t) 2,
-                                 (errorparameter_t) 0);
-                }
             }
 
             RESET_FRAG_BUFFER_ENTRY(i);
@@ -645,11 +624,8 @@ static owerror_t allocate_vrb(OpenQueueEntry_t *frag1, uint16_t size, uint16_t t
             frag_vars.vrbs[i].forward_timer = opentimers_create(TIMER_GENERAL_PURPOSE, TASKPRIO_FRAG);
 
             // get a timer for the fragment forwarding and add it to the timer queue
-            if ((frag_vars.vrbs[i].forward_timer == ERROR_NO_AVAILABLE_ENTRIES) ||
-                (frag_timerq_enqueue(frag_vars.vrbs[i].forward_timer) == E_FAIL)) {
-
-                LOG_ERROR(COMPONENT_FRAG, ERR_NO_FREE_TIMER_OR_QUEUE_ENTRY,
-                          (errorparameter_t) 0, (errorparameter_t) 0);
+            if (frag_vars.vrbs[i].forward_timer == ERROR_NO_AVAILABLE_ENTRIES) {
+                LOG_ERROR(COMPONENT_FRAG, ERR_NO_FREE_TIMER, (errorparameter_t) 0, (errorparameter_t) 0);
                 memset(&frag_vars.vrbs[i], 0, sizeof(vrb_t));
                 return E_FAIL;
             }
@@ -697,22 +673,12 @@ static void fast_forward_frags(uint16_t tag, uint16_t size, uint8_t vrb_pos) {
                 LOG_VERBOSE(COMPONENT_FRAG, ERR_FRAG_FAST_FORWARD, (errorparameter_t) tag, (errorparameter_t) size);
                 opentimers_cancel(frag_vars.vrbs[vrb_pos].forward_timer);
                 opentimers_destroy(frag_vars.vrbs[vrb_pos].forward_timer);
-                if (frag_timerq_remove(frag_vars.vrbs[vrb_pos].forward_timer) == E_FAIL) {
-                    LOG_CRITICAL(COMPONENT_FRAG, ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER,
-                                 (errorparameter_t) 3,
-                                 (errorparameter_t) 0);
-                }
                 memset(&frag_vars.vrbs[vrb_pos], 0, sizeof(vrb_t));
             }
 
             if (frag_vars.fragmentBuf[i].reassembly_timer != 0) {
                 opentimers_cancel(frag_vars.fragmentBuf[i].reassembly_timer);
                 opentimers_destroy(frag_vars.fragmentBuf[i].reassembly_timer);
-                if (frag_timerq_remove(frag_vars.fragmentBuf[i].reassembly_timer) == E_FAIL) {
-                    LOG_CRITICAL(COMPONENT_FRAG, ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER,
-                                 (errorparameter_t) 4,
-                                 (errorparameter_t) 0);
-                }
             }
 
             prepend_fragn_header(
@@ -750,63 +716,17 @@ static void prepend_fragn_header(OpenQueueEntry_t *fragn, uint16_t size, uint16_
     ((fragn_t *) fragn->payload)->datagram_offset = offset;
 }
 
-owerror_t frag_timerq_enqueue(opentimers_id_t id) {
-    uint32_t i;
-    for (i = 0; i < NUM_OF_CONCURRENT_TIMERS; i++) {
-        if (frag_vars.frag_timerq[i] == 0) {
-            frag_vars.frag_timerq[i] = id;
-            return E_SUCCESS;
-        }
-    }
-
-    return E_FAIL;
-}
-
-opentimers_id_t frag_timerq_dequeue(void) {
-    opentimers_id_t expired;
-    expired = frag_vars.frag_timerq[0];
-
-    memcpy((uint8_t *) frag_vars.frag_timerq, (uint8_t * ) & (frag_vars.frag_timerq[1]), NUM_OF_CONCURRENT_TIMERS - 1);
-    frag_vars.frag_timerq[NUM_OF_CONCURRENT_TIMERS - 1] = 0;
-
-    return expired;
-}
-
-owerror_t frag_timerq_remove(opentimers_id_t id) {
-    uint32_t i;
-    for (i = 0; i < NUM_OF_CONCURRENT_TIMERS - 1; i++) {
-        if (frag_vars.frag_timerq[i] == id) {
-            memcpy(&frag_vars.frag_timerq[i], &frag_vars.frag_timerq[i + 1], NUM_OF_CONCURRENT_TIMERS - 1 - i);
-            frag_vars.frag_timerq[NUM_OF_CONCURRENT_TIMERS - 1] = 0;
-            return E_SUCCESS;
-        }
-    }
-
-    if (frag_vars.frag_timerq[NUM_OF_CONCURRENT_TIMERS - 1] == id) {
-        frag_vars.frag_timerq[NUM_OF_CONCURRENT_TIMERS - 1] = 0;
-        return E_SUCCESS;
-    }
-
-    return E_FAIL;
-}
-
 void frag_timeout_cb(void* arg) {
     (void) arg;
-
     uint32_t j;
     opentimers_id_t expired_timer;
 
-    if ((expired_timer = frag_timerq_dequeue()) == 0) {
-        // timer id can never be 0, if we get zero we have "dequeued" and empty queue!
-        LOG_CRITICAL(COMPONENT_FRAG, ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER,
-                     (errorparameter_t) 0,
-                     (errorparameter_t) 0);
-    }
+    expired_timer = *((opentimers_id_t*)arg);
 
     // find the tag of the expired fragments
     for (j = 0; j < FRAGMENT_BUFFER_SIZE; j++) {
         if (frag_vars.fragmentBuf[j].pFragment != NULL && frag_vars.fragmentBuf[j].reassembly_timer == expired_timer) {
-            LOG_ERROR(COMPONENT_FRAG, ERR_FRAG_REASSEMBLY_OR_VRB_TIMEOUT,
+            LOG_ERROR(COMPONENT_FRAG, ERR_FRAG_REASSEMBLY_TIMEOUT,
                       (errorparameter_t) frag_vars.fragmentBuf[j].datagram_tag,
                       (errorparameter_t) 0);
             opentimers_destroy(frag_vars.fragmentBuf[j].reassembly_timer);
@@ -817,7 +737,7 @@ void frag_timeout_cb(void* arg) {
 
     for (j = 0; j < NUM_OF_VRBS; j++) {
         if (frag_vars.vrbs[j].tag != 0 && frag_vars.vrbs[j].forward_timer == expired_timer) {
-            LOG_CRITICAL(COMPONENT_FRAG, ERR_FRAG_REASSEMBLY_OR_VRB_TIMEOUT,
+            LOG_CRITICAL(COMPONENT_FRAG, ERR_FRAG_VRB_TIMEOUT,
                          (errorparameter_t) frag_vars.vrbs[j].tag,
                          (errorparameter_t) 0);
             opentimers_destroy(frag_vars.vrbs[j].forward_timer);
