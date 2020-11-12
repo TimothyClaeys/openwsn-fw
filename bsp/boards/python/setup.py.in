@@ -42,6 +42,7 @@ openwsn_module = Extension(
         ('OPENWSN_UDP_C', '${OPENWSN_UDP_C}'),
         ('OPENWSN_ICMPV6ECHO_C', '${OPENWSN_ICMPV6ECHO_C}'),
         ('OPENWSN_6LO_FRAGMENTATION_C', '${OPENWSN_6LO_FRAGMENTATION_C}'),
+        ('OPENWSN_IEEE802154E_SECURITY_C', '${OPENWSN_IEEE802154E_SECURITY_C}'),
 
         # stack configuration
         ('ADAPTIVE_MSF', '${ADAPTIVE_MSF}'),

@@ -257,7 +257,7 @@ void IEEE802154_security_retrieveAuxiliarySecurityHeader(QueueEntry_t *msg, ieee
     uint8_t temp8b;
     uint8_t i;
     uint8_t receivedASN[5];
-    macFrameCounter_t l2_frameCounter;
+    asn_t l2_frameCounter;
 
     // retrieve the Security Control field
     // 1byte, Security Control Field
