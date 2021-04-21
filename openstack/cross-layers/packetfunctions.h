@@ -44,16 +44,19 @@ void packetfunctions_readAddress(const uint8_t *payload, uint8_t type, open_addr
 owerror_t packetfunctions_writeAddress(OpenQueueEntry_t **msg, const open_addr_t *address, bool littleEndian);
 
 // reserving/tossing headers and footers
-owerror_t packetfunctions_reserveHeader(OpenQueueEntry_t **pkt, uint16_t header_length);
+owerror_t packetfunctions_reserveHeader(OpenQueueEntry_t **pkt, int16_t header_length);
 
-void packetfunctions_tossHeader(OpenQueueEntry_t **pkt, uint16_t header_length);
+void packetfunctions_tossHeader(OpenQueueEntry_t **pkt, int16_t header_length);
 
-owerror_t packetfunctions_reserveFooter(OpenQueueEntry_t **pkt, uint16_t footer_length);
+owerror_t packetfunctions_reserveFooter(OpenQueueEntry_t **pkt, int16_t footer_length);
 
-void packetfunctions_tossFooter(OpenQueueEntry_t **pkt, uint16_t footer_length);
+void packetfunctions_tossFooter(OpenQueueEntry_t **pkt, int16_t footer_length);
 
 // packet duplication
 void packetfunctions_duplicatePacket(OpenQueueEntry_t *dst, const OpenQueueEntry_t *src);
+
+// reset packet
+void packetfunctions_resetPayload(OpenQueueEntry_t *pkt);
 
 // calculate CRC
 void packetfunctions_calculateCRC(OpenQueueEntry_t *msg);
@@ -66,11 +69,11 @@ void packetfunctions_calculateChecksum(OpenQueueEntry_t *msg, uint8_t *checksum_
 // endianness
 void packetfunctions_htons(uint16_t val, uint8_t *dest);
 
-uint16_t packetfunctions_ntohs(uint8_t *src);
+uint16_t packetfunctions_ntohs(const uint8_t *src);
 
 void packetfunctions_htonl(uint32_t val, uint8_t *dest);
 
-uint32_t packetfunctions_ntohl(uint8_t *src);
+uint32_t packetfunctions_ntohl(const uint8_t *src);
 
 void packetfunctions_reverseArrayByteOrder(uint8_t *start, uint8_t len);
 

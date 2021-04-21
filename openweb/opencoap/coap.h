@@ -211,7 +211,7 @@ typedef struct {
 void coap_init(void);
 
 // from CoAP resources
-void coap_writeLinks(OpenQueueEntry_t *msg, uint8_t componentID);
+owerror_t coap_writeLinks(OpenQueueEntry_t *msg, uint8_t componentID);
 
 void coap_register(coap_resource_desc_t *desc);
 

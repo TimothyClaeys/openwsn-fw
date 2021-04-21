@@ -3,7 +3,7 @@
 
 #include "opendefs.h"
 
-void sock_receive_internal(void);
+void sock_receive_internal(void* arg);
 
 void sock_senddone_internal(OpenQueueEntry_t* msg, owerror_t error);
 

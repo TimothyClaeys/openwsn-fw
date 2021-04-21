@@ -27,7 +27,7 @@ static bool _sock_valid_addr(sock_udp_ep_t *ep);
 
 static void _sock_get_local_addr(open_addr_t *local);
 
-static void _sock_transmit_internal(void);
+static void _sock_transmit_internal(void *arg);
 
 // ============================= public ========================================
 
@@ -299,7 +299,9 @@ void sock_udp_set_cb(sock_udp_t *sock, sock_udp_cb_t cb, void *cb_arg) {
 
 // ============================= private =======================================
 
-void _sock_transmit_internal(void) {
+void _sock_transmit_internal(void* arg) {
+    (void) arg;
+
     OpenQueueEntry_t *pkt;
 
     pkt = openqueue_getPacketByComponent(COMPONENT_SOCK_TO_UDP);

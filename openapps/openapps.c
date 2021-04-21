@@ -51,6 +51,10 @@
 #include "cjoin.h"
 #endif
 
+#if OPENWSN_CEDHOC_C
+#include "cedhoc.h"
+#endif
+
 //=========================== variables =======================================
 
 //=========================== prototypes ======================================
@@ -62,6 +66,10 @@
 void openapps_init(void) {
 #if OPENWSN_CJOIN_C
     cjoin_init();
+#endif
+
+#if OPENWSN_CEDHOC_C
+    cedhoc_init();
 #endif
 
 #if OPENWSN_C6T_C

@@ -7,6 +7,7 @@
 #include "coap.h"
 #include "openqueue.h"
 #include "idmanager.h"
+#include "packetfunctions.h"
 
 //=========================== variables =======================================
 
@@ -61,11 +62,12 @@ owerror_t cwellknown_receive(OpenQueueEntry_t *msg,
     switch (coap_header->Code) {
         case COAP_CODE_REQ_GET:
             // reset packet payload
-            msg->payload = &(msg->packet[127]);
-            msg->length = 0;
+            packetfunctions_resetPayload(msg);
 
             // have CoAP module write links to all resources
-            coap_writeLinks(msg, COMPONENT_CWELLKNOWN);
+            if ((outcome = coap_writeLinks(msg, COMPONENT_CWELLKNOWN)) == E_FAIL){
+                break;
+            }
 
             // add return option
             cwellknown_vars.medType = COAP_MEDTYPE_APPLINKFORMAT;

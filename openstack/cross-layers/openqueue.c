@@ -514,6 +514,6 @@ void openqueue_reset_big_entry(OpenQueueBigEntry_t *entry) {
     openqueue_reset_entry(&(entry->standard_entry));
 
     // reset pointer to the end op the extended buffer
-    entry->standard_entry.payload = &(entry->standard_entry.packet[IPV6_PACKET_SIZE]);
+    entry->standard_entry.payload = &(entry->packet_remainder[IPV6_PACKET_SIZE - IEEE802154_FRAME_SIZE]);
 }
 #endif

@@ -18,7 +18,6 @@ void udp_sendDone(OpenQueueEntry_t *msg, owerror_t error) {
 }
 
 void udp_receive(OpenQueueEntry_t *msg) {
-
     msg->owner = COMPONENT_UDP_TO_SOCK;
     msg->l4_sourcePortORicmpv6Type = packetfunctions_ntohs((uint8_t * ) & (((udp_ht *) (msg->payload))->source_port));
     msg->l4_destination_port = packetfunctions_ntohs((uint8_t * ) & (((udp_ht *) (msg->payload))->dest_port));

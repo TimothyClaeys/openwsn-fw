@@ -222,19 +222,19 @@ void coap_receive(OpenQueueEntry_t *msg) {
     }
     if (objectSecurity) {
         if (objectSecurity->length == 0 && msg->length == 0) {
-            // malformated object security message
+            // malformed object security message
             return;
         }
 
         if (oscore_parse_compressed_COSE(objectSecurity->pValue,
-                                             objectSecurity->length,
-                                             &rcvdSequenceNumber,
-					     &rcvdKidContext,
-					     &rcvdKidContextLen,
-                                             &rcvdKid,
-         				     &rcvdKidLen) == E_FAIL) {
+                                         objectSecurity->length,
+                                         &rcvdSequenceNumber,
+                                         &rcvdKidContext,
+                                         &rcvdKidContextLen,
+                                         &rcvdKid,
+                                         &rcvdKidLen) == E_FAIL) {
             return;
-	}
+        }
     }
 
     //=== step 2. find the resource to handle the packet
@@ -254,8 +254,8 @@ void coap_receive(OpenQueueEntry_t *msg) {
                 if (temp_desc->securityContext != NULL &&
                     temp_desc->securityContext->recipientIDLen == rcvdKidLen &&
                     memcmp(rcvdKid, temp_desc->securityContext->recipientID, rcvdKidLen) == 0 &&
-		    temp_desc->securityContext->idContextLen == rcvdKidContextLen &&
-		    memcmp(rcvdKidContext, temp_desc->securityContext->idContext, rcvdKidContextLen) == 0) {
+                    temp_desc->securityContext->idContextLen == rcvdKidContextLen &&
+                    memcmp(rcvdKidContext, temp_desc->securityContext->idContext, rcvdKidContextLen) == 0) {
 
                     blindContext = temp_desc->securityContext;
                     break;
@@ -292,17 +292,16 @@ void coap_receive(OpenQueueEntry_t *msg) {
         // iterate until matching resource found, or no match
         while (found == FALSE && securityReturnCode == COAP_CODE_EMPTY) {
 
-            option_count = coap_find_option(coap_incomingOptions, coap_incomingOptionsLen, COAP_OPTION_NUM_URIPATH,
+            option_count = coap_find_option(coap_incomingOptions,
+                                            coap_incomingOptionsLen,
+                                            COAP_OPTION_NUM_URIPATH,
                                             &option_index);
             if (
                     option_count == 2 &&
-                    temp_desc->path0len > 0 &&
-                    temp_desc->path0val != NULL &&
-                    temp_desc->path1len > 0 &&
-                    temp_desc->path1val != NULL
-                    ) {
-                // resource has a path of form path0/path1
+                    temp_desc->path0len > 0 && temp_desc->path0val != NULL &&
+                    temp_desc->path1len > 0 && temp_desc->path1val != NULL) {
 
+                // resource has a path of form path0/path1
                 if (
                         coap_incomingOptions[option_index].length == temp_desc->path0len &&
                         memcmp(coap_incomingOptions[option_index].pValue, temp_desc->path0val, temp_desc->path0len) ==
@@ -311,36 +310,28 @@ void coap_receive(OpenQueueEntry_t *msg) {
                         memcmp(coap_incomingOptions[option_index + 1].pValue, temp_desc->path1val,
                                temp_desc->path1len) == 0
                         ) {
-                    if (temp_desc->securityContext != NULL &&
-                        blindContext != temp_desc->securityContext) {
+                    if (temp_desc->securityContext != NULL && blindContext != temp_desc->securityContext) {
                         securityReturnCode = COAP_CODE_RESP_UNAUTHORIZED;
                     }
                     found = TRUE;
-                };
-
-            } else if (
-                    option_count == 1 &&
-                    temp_desc->path0len > 0 &&
-                    temp_desc->path0val != NULL
-                    ) {
+                }
+            } else if (option_count == 1 && temp_desc->path0len > 0 && temp_desc->path0val != NULL) {
                 // resource has a path of form path0
-
                 if (
                         coap_incomingOptions[option_index].length == temp_desc->path0len &&
                         memcmp(coap_incomingOptions[option_index].pValue, temp_desc->path0val, temp_desc->path0len) == 0
                         ) {
-                    if (temp_desc->securityContext != NULL &&
-                        blindContext != temp_desc->securityContext) {
+                    if (temp_desc->securityContext != NULL && blindContext != temp_desc->securityContext) {
                         securityReturnCode = COAP_CODE_RESP_UNAUTHORIZED;
                     }
                     found = TRUE;
-                };
+                }
             } else {
                 // option_count == 0  ||
                 // option_count >= 2
                 // resource has not a valid path or path is too long
                 found = FALSE;
-            };
+            }
 
             // iterate to next resource, if not found
             if (found == FALSE) {
@@ -365,12 +356,9 @@ void coap_receive(OpenQueueEntry_t *msg) {
 
             if (
                     coap_header.TKL == temp_desc->last_request.TKL &&
-                    memcmp(&coap_header.token[0], &temp_desc->last_request.token[0], coap_header.TKL) == 0
-                    ) {
+                    memcmp(&coap_header.token[0], &temp_desc->last_request.token[0], coap_header.TKL) == 0) {
 
-                if (coap_header.T == COAP_TYPE_ACK ||
-                    coap_header.T == COAP_TYPE_RES ||
-                    coap_header.TKL == 0) {
+                if (coap_header.T == COAP_TYPE_ACK || coap_header.T == COAP_TYPE_RES || coap_header.TKL == 0) {
                     if (coap_header.messageID == temp_desc->last_request.messageID) {
                         found = TRUE;
                     }
@@ -423,7 +411,8 @@ void coap_receive(OpenQueueEntry_t *msg) {
     if (found == TRUE && securityReturnCode == COAP_CODE_EMPTY) {
 
         // call the resource's callback
-        outcome = temp_desc->callbackRx(msg, &coap_header, &coap_incomingOptions[0], coap_outgoingOptions, &coap_outgoingOptionsLen);
+        outcome = temp_desc->callbackRx(msg, &coap_header, &coap_incomingOptions[0], coap_outgoingOptions,
+                                        &coap_outgoingOptionsLen);
 
         if (outcome == E_FAIL) {
             securityReturnCode = COAP_CODE_RESP_METHODNOTALLOWED;
@@ -453,11 +442,10 @@ void coap_receive(OpenQueueEntry_t *msg) {
         }
 
     } else {
-	// resource not found but success in creating the response
+        // resource not found but success in creating the response
         outcome = E_SUCCESS;
         // reset packet payload (DO NOT DELETE, we will reuse same buffer for response)
-        msg->payload = &(msg->packet[127]); // FIXME use packetfunctions to reset
-        msg->length = 0;
+        packetfunctions_resetPayload(msg);
         // set the CoAP header
         coap_header.TKL = 0;
         if (securityReturnCode) {
@@ -469,8 +457,7 @@ void coap_receive(OpenQueueEntry_t *msg) {
 
     if (outcome == E_FAIL) {
         // reset packet payload (DO NOT DELETE, we will reuse same buffer for response)
-        msg->payload = &(msg->packet[127]); // FIXME use packetfunctions to reset
-        msg->length = 0;
+        packetfunctions_resetPayload(msg);
         // set the CoAP header
         coap_header.TKL = 0;
         coap_header.Code = securityReturnCode;
@@ -575,33 +562,31 @@ void coap_sendDone(OpenQueueEntry_t *msg, owerror_t error) {
 /**
 \brief Writes the links to all the resources on this mote into the message.
 
-\param[out] msg The messge to write the links to.
+\param[out] msg The message to write the links to.
 \param[in] componentID The componentID calling this function.
 
 \post After this function returns, the msg contains
 */
-void coap_writeLinks(OpenQueueEntry_t *msg, uint8_t componentID) {
+owerror_t coap_writeLinks(OpenQueueEntry_t *msg, uint8_t componentID) {
+    (void) componentID;
+
+    uint8_t linksWritten;
     coap_resource_desc_t *temp_resource;
 
     // start with the first resource in the linked list
     temp_resource = coap_vars.resources;
 
+    linksWritten = 0;
+
     // iterate through all resources
     while (temp_resource != NULL) {
 
-        if (
-                (temp_resource->discoverable == TRUE) &&
-                (
-                        ((componentID == COMPONENT_CWELLKNOWN) && (temp_resource->path1len == 0))
-                        ||
-                        ((componentID == temp_resource->componentID) && (temp_resource->path1len != 0))
-                )
-                ) {
+        if (temp_resource->discoverable == TRUE) {
 
             // write ending '>'
             if (packetfunctions_reserveHeader(&msg, 1) == E_FAIL) {
                 openqueue_freePacketBuffer(msg);
-                return;
+                return E_FAIL;
             }
             msg->payload[0] = '>';
 
@@ -609,12 +594,12 @@ void coap_writeLinks(OpenQueueEntry_t *msg, uint8_t componentID) {
             if (temp_resource->path1len > 0) {
                 if (packetfunctions_reserveHeader(&msg, temp_resource->path1len) == E_FAIL) {
                     openqueue_freePacketBuffer(msg);
-                    return;
+                    return E_FAIL;
                 }
                 memcpy(&msg->payload[0], temp_resource->path1val, temp_resource->path1len);
                 if (packetfunctions_reserveHeader(&msg, 1) == E_FAIL) {
                     openqueue_freePacketBuffer(msg);
-                    return;
+                    return E_FAIL;
                 }
                 msg->payload[0] = '/';
             }
@@ -622,30 +607,37 @@ void coap_writeLinks(OpenQueueEntry_t *msg, uint8_t componentID) {
             // write path0
             if (packetfunctions_reserveHeader(&msg, temp_resource->path0len) == E_FAIL) {
                 openqueue_freePacketBuffer(msg);
-                return;
+                return E_FAIL;
             }
             memcpy(msg->payload, temp_resource->path0val, temp_resource->path0len);
             if (packetfunctions_reserveHeader(&msg, 2) == E_FAIL) {
                 openqueue_freePacketBuffer(msg);
-                return;
+                return E_FAIL;
             }
             msg->payload[1] = '/';
 
             // write opening '>'
             msg->payload[0] = '<';
 
-            // write separator between links
+            // write separator between links (only when the next resource is also discoverable)
             if (temp_resource->next != NULL) {
                 if (packetfunctions_reserveHeader(&msg, 1) == E_FAIL) {
                     openqueue_freePacketBuffer(msg);
-                    return;
+                    return E_FAIL;
                 }
                 msg->payload[0] = ',';
             }
         }
         // iterate to next resource
+        linksWritten++;
         temp_resource = temp_resource->next;
     }
+
+    if (linksWritten > 0) {
+        packetfunctions_tossHeader(&msg, 1);
+    }
+
+    return E_SUCCESS;
 }
 
 /**
@@ -963,15 +955,15 @@ void coap_sock_handler(sock_udp_t *sock, sock_async_flags_t type, void *arg) {
 
         msg = openqueue_getFreePacketBuffer(COMPONENT_OPENCOAP);
 
-	if (msg == NULL) {
+        if (msg == NULL) {
             LOG_ERROR(COMPONENT_OPENCOAP, ERR_NO_FREE_PACKET_BUFFER, (errorparameter_t) 0, (errorparameter_t) 0);
             return;
         }
 
-	// take ownership over the packet
-	msg->owner = COMPONENT_OPENCOAP;
+        // take ownership over the packet
+        msg->owner = COMPONENT_OPENCOAP;
 
-	if (packetfunctions_reserveHeader(&msg, COAP_MAX_MSG_LEN) == E_FAIL) {
+        if (packetfunctions_reserveHeader(&msg, COAP_MAX_MSG_LEN) == E_FAIL) {
             openserial_printf("Could not reserve header\n");
             return;
         }
@@ -981,33 +973,33 @@ void coap_sock_handler(sock_udp_t *sock, sock_async_flags_t type, void *arg) {
             openserial_printf("Received %d bytes from remote endpoint:\n", res);
             openserial_printf(" - port: %d", remote.port);
             openserial_printf(" - addr: ", remote.port);
-            for(int i=0; i < 16; i ++) {
+            for (int i = 0; i < 16; i++) {
                 openserial_printf("%x ", remote.addr.ipv6[i]);
-	    }
+            }
 
             openserial_printf("\n\n");
 
-	    // set the length to the actual received bytes
-    	    footer_length = msg->length - res;
-	    packetfunctions_tossFooter(&msg, footer_length);
+            // set the length to the actual received bytes
+            footer_length = msg->length - res;
+            packetfunctions_tossFooter(&msg, footer_length);
 
-	    // fill the metadata
-	    msg->owner = COMPONENT_OPENCOAP;
+            // fill the metadata
+            msg->owner = COMPONENT_OPENCOAP;
             msg->l4_protocol_compressed = FALSE;
             msg->l4_protocol = IANA_UDP;
             msg->l4_sourcePortORicmpv6Type = remote.port;
             sock_udp_get_local(sock, &local);
-	    msg->l4_destination_port = local.port;
-	    msg->l4_payload = msg->payload;
-	    msg->l4_length = res;
+            msg->l4_destination_port = local.port;
+            msg->l4_payload = msg->payload;
+            msg->l4_length = res;
             memcpy(&msg->l3_destinationAdd.addr_type.addr_128b, &local.addr, LENGTH_ADDR128b);
             memcpy(&msg->l3_sourceAdd.addr_type.addr_128b, &remote.addr, LENGTH_ADDR128b);
 
-	    coap_receive(msg);
+            coap_receive(msg);
         }
     } else if (type & SOCK_ASYNC_MSG_SENT) {
         msg = openqueue_getPacketByComponent(COMPONENT_OPENCOAP);
-        coap_sendDone(msg, *(owerror_t *)arg);
+        coap_sendDone(msg, *(owerror_t *) arg);
     }
 }
 

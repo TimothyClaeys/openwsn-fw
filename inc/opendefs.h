@@ -46,10 +46,10 @@ static const uint8_t infoStackName[] = "OpenWSN ";
 #define CELLLIST_MAX_LEN 5
 
 // frame sizes
-#define IEEE802154_FRAME_SIZE   127
+#define IEEE802154_FRAME_SIZE   (127)
 
 #if OPENWSN_6LO_FRAGMENTATION_C
-#define IPV6_PACKET_SIZE        MAX_PKTSIZE_SUPPORTED
+#define IPV6_PACKET_SIZE        (MAX_PKTSIZE_SUPPORTED)
 #else
 #define IPV6_PACKET_SIZE        IEEE802154_FRAME_SIZE
 #endif
@@ -228,69 +228,70 @@ enum {
     ERR_FRAG_REASSEMBLED = 0x1a,                // reassembled fragments into big packet (size: {0}, tag: {1})
     ERR_FRAG_FAST_FORWARD = 0x1b,               // fast-forwarded all fragments with tag {0} (total size: {1})
     ERR_FRAG_STORED = 0x1c,                     // stored a fragment with offset {0} (currently in buffer: {1})
-    ERR_FRAG_REASSEMBLY_OR_VRB_TIMEOUT = 0x1d,  // reassembly or vrb timer expired for fragments with tag {0}
-    ERR_FRAG_FRAGMENTING = 0x1e,                // fragmenting a big packet, original size {0}, number of fragments {1}
-    ERR_BRIDGE_MISMATCH = 0x1f,                 // bridge mismatch (code location {0})
+    ERR_FRAG_REASSEMBLY_TIMEOUT = 0x1d,         // reassembly or vrb timer expired for fragments with tag {0}
+    ERR_FRAG_VRB_TIMEOUT = 0x1e,             // reassembly or vrb timer expired for fragments with tag {0}
+    ERR_FRAG_FRAGMENTING = 0x1f,                // fragmenting a big packet, original size {0}, number of fragments {1}
+    ERR_BRIDGE_MISMATCH = 0x20,                 // bridge mismatch (code location {0})
     // l2b
-    ERR_SCHEDULE_ADD_DUPLICATE_SLOT = 0x20,     // the slot {0} to be added is already in schedule
-    ERR_NEIGHBORS_FULL = 0x21,                  // neighbors table is full (max number of neighbor is {0})
-    ERR_NO_SENT_PACKET = 0x22,                  // there is no sent packet in queue
-    ERR_NO_RECEIVED_PACKET = 0x23,              // there is no received packet in queue
-    ERR_SCHEDULE_OVERFLOWN = 0x24,              // schedule overflown
-    ERR_SIXTOP_RETURNCODE = 0x25,               // sixtop return code {0} at sixtop state {1}
-    ERR_SIXTOP_REQUEST = 0x26,                  // sending a 6top request, req: {0}
-    ERR_SIXTOP_UNKNOWN = 0x27,                  // unknown sixtop request, req: {0}
-    ERR_SIXTOP_COUNT = 0x28,                    // there are {0} cells to request mote
-    ERR_SIXTOP_LIST = 0x29,                     // the cells reserved to request mote contains slot {0} and slot {1}
-    ERR_UNSUPPORTED_FORMAT = 0x2a,              // the received packet format is not supported (code location {0})
-    ERR_UNSUPPORTED_METADATA = 0x2b,            // the metadata type is not suppored
-    ERR_TX_CELL_USAGE = 0x2c,                   // TX cell usage during last period: {}
-    ERR_RX_CELL_USAGE = 0x2d,                   // RX cell usage during last period: {}
+    ERR_SCHEDULE_ADD_DUPLICATE_SLOT = 0x21,     // the slot {0} to be added is already in schedule
+    ERR_NEIGHBORS_FULL = 0x22,                  // neighbors table is full (max number of neighbor is {0})
+    ERR_NO_SENT_PACKET = 0x23,                  // there is no sent packet in queue
+    ERR_NO_RECEIVED_PACKET = 0x24,              // there is no received packet in queue
+    ERR_SCHEDULE_OVERFLOWN = 0x25,              // schedule overflown
+    ERR_SIXTOP_RETURNCODE = 0x26,               // sixtop return code {0} at sixtop state {1}
+    ERR_SIXTOP_REQUEST = 0x27,                  // sending a 6top request, req: {0}
+    ERR_SIXTOP_UNKNOWN = 0x28,                  // unknown sixtop request, req: {0}
+    ERR_SIXTOP_COUNT = 0x29,                    // there are {0} cells to request mote
+    ERR_SIXTOP_LIST = 0x2a,                     // the cells reserved to request mote contains slot {0} and slot {1}
+    ERR_UNSUPPORTED_FORMAT = 0x2b,              // the received packet format is not supported (code location {0})
+    ERR_UNSUPPORTED_METADATA = 0x2c,            // the metadata type is not suppored
+    ERR_TX_CELL_USAGE = 0x2d,                   // TX cell usage during last period: {}
+    ERR_RX_CELL_USAGE = 0x2e,                   // RX cell usage during last period: {}
     // l2a
-    ERR_WRONG_CELLTYPE = 0x2e,                  // wrong celltype {0} at slotOffset {1}
-    ERR_IEEE154_UNSUPPORTED = 0x2f,             // unsupported IEEE802.15.4 parameter {1} at location {0}
-    ERR_DESYNCHRONIZED = 0x30,                  // got desynchronized at slotOffset {0}
-    ERR_SYNCHRONIZED = 0x31,                    // synchronized at slotOffset {0} to mote {1}
-    ERR_LARGE_TIMECORRECTION = 0x32,            // large timeCorr.: {0} ticks (code loc. {1})
-    ERR_WRONG_STATE_IN_ENDFRAME_SYNC = 0x33,    // wrong state {0} in end of frame+sync
-    ERR_WRONG_STATE_IN_STARTSLOT = 0x34,        // wrong state {0} in startSlot, at slotOffset {1}
-    ERR_WRONG_STATE_IN_TIMERFIRES = 0x35,       // wrong state {0} in timer fires, at slotOffset {1}
-    ERR_WRONG_STATE_IN_NEWSLOT = 0x36,          // wrong state {0} in start of frame, at slotOffset {1}
-    ERR_WRONG_STATE_IN_ENDOFFRAME = 0x37,       // wrong state {0} in end of frame, at slotOffset {1}
-    ERR_MAXTXDATAPREPARE_OVERFLOW = 0x38,       // maxTxDataPrepare overflows while at state {0} in slotOffset {1}
-    ERR_MAXRXACKPREPARE_OVERFLOWS = 0x39,       // maxRxAckPrepapare overflows while at state {0} in slotOffset {1}
-    ERR_MAXRXDATAPREPARE_OVERFLOWS = 0x3a,      // maxRxDataPrepapre overflows while at state {0} in slotOffset {1}
-    ERR_MAXTXACKPREPARE_OVERFLOWS = 0x3b,       // maxTxAckPrepapre overflows while at state {0} in slotOffset {1}
-    ERR_WDDATADURATION_OVERFLOWS = 0x3c,        // wdDataDuration overflows while at state {0} in slotOffset {1}
-    ERR_WDRADIO_OVERFLOWS = 0x3d,               // wdRadio overflows while at state {0} in slotOffset {1}
-    ERR_WDRADIOTX_OVERFLOWS = 0x3e,             // wdRadioTx overflows while at state {0} in slotOffset {1}
-    ERR_WDACKDURATION_OVERFLOWS = 0x3f,         // wdAckDuration overflows while at state {0} in slotOffset {1}
-    ERR_SECURITY = 0x40,                        // security error on frameType {0}, code location {1}
-    ERR_INVALID_PACKET_FROM_RADIO = 0x41,       // invalid packet from radio
+    ERR_WRONG_CELLTYPE = 0x2f,                  // wrong celltype {0} at slotOffset {1}
+    ERR_IEEE154_UNSUPPORTED = 0x30,             // unsupported IEEE802.15.4 parameter {1} at location {0}
+    ERR_DESYNCHRONIZED = 0x31,                  // got desynchronized at slotOffset {0}
+    ERR_SYNCHRONIZED = 0x32,                    // synchronized at slotOffset {0} to mote {1}
+    ERR_LARGE_TIMECORRECTION = 0x33,            // large timeCorr.: {0} ticks (code loc. {1})
+    ERR_WRONG_STATE_IN_ENDFRAME_SYNC = 0x34,    // wrong state {0} in end of frame+sync
+    ERR_WRONG_STATE_IN_STARTSLOT = 0x35,        // wrong state {0} in startSlot, at slotOffset {1}
+    ERR_WRONG_STATE_IN_TIMERFIRES = 0x36,       // wrong state {0} in timer fires, at slotOffset {1}
+    ERR_WRONG_STATE_IN_NEWSLOT = 0x37,          // wrong state {0} in start of frame, at slotOffset {1}
+    ERR_WRONG_STATE_IN_ENDOFFRAME = 0x38,       // wrong state {0} in end of frame, at slotOffset {1}
+    ERR_MAXTXDATAPREPARE_OVERFLOW = 0x39,       // maxTxDataPrepare overflows while at state {0} in slotOffset {1}
+    ERR_MAXRXACKPREPARE_OVERFLOWS = 0x3a,       // maxRxAckPrepapare overflows while at state {0} in slotOffset {1}
+    ERR_MAXRXDATAPREPARE_OVERFLOWS = 0x3b,      // maxRxDataPrepapre overflows while at state {0} in slotOffset {1}
+    ERR_MAXTXACKPREPARE_OVERFLOWS = 0x3c,       // maxTxAckPrepapre overflows while at state {0} in slotOffset {1}
+    ERR_WDDATADURATION_OVERFLOWS = 0x3d,        // wdDataDuration overflows while at state {0} in slotOffset {1}
+    ERR_WDRADIO_OVERFLOWS = 0x3e,               // wdRadio overflows while at state {0} in slotOffset {1}
+    ERR_WDRADIOTX_OVERFLOWS = 0x3f,             // wdRadioTx overflows while at state {0} in slotOffset {1}
+    ERR_WDACKDURATION_OVERFLOWS = 0x40,         // wdAckDuration overflows while at state {0} in slotOffset {1}
+    ERR_SECURITY = 0x41,                        // security error on frameType {0}, code location {1}
+    ERR_INVALID_PACKET_FROM_RADIO = 0x42,       // invalid packet from radio
     // drivers
-    ERR_GETDATA_ASKS_TOO_FEW_BYTES = 0x42,      // getData asks for too few bytes, maxNumBytes={0}, fill level={1}
-    ERR_WRONG_CRC_INPUT = 0x43,                 // wrong CRC in input Buffer
+    ERR_GETDATA_ASKS_TOO_FEW_BYTES = 0x43,      // getData asks for too few bytes, maxNumBytes={0}, fill level={1}
+    ERR_WRONG_CRC_INPUT = 0x44,                 // wrong CRC in input Buffer
     // cross layer
-    ERR_BUFFER_OVERFLOW = 0x44,                 // buffer overflow detected (code location {0})
-    ERR_BUSY_SENDING = 0x45,                    // busy sending
-    ERR_UNEXPECTED_SENDDONE = 0x46,             // sendDone for packet I didn't send
-    ERR_NO_FREE_PACKET_BUFFER = 0x47,           // no free packet buffer (code location {0})
-    ERR_NO_FREE_TIMER_OR_QUEUE_ENTRY = 0x48,    // no free timer or queue entry (code location {0})
-    ERR_FREEING_UNUSED = 0x49,                  // freeing unused memory
-    ERR_FREEING_ERROR = 0x4a,                   // freeing memory unsupported memory
-    ERR_MSG_UNKNOWN_TYPE = 0x4b,                // unknown message type {0}
-    ERR_WRONG_ADDR_TYPE = 0x4c,                 // wrong address type {0} (code location {1})
-    ERR_PACKET_TOO_LONG = 0x4d,                 // total packet size is too long, length {0} (adding {1} bytes)
-    ERR_PACKET_TOO_SHORT = 0x4e,                // total packet size is too short, length {0} (removing {1} bytes)
-    ERR_INPUTBUFFER_LENGTH = 0x4f,              // input length problem, length={0}
-    ERR_BOOTED = 0x50,                          // booted
-    ERR_MAXRETRIES_REACHED = 0x51,              // maxretries reached (counter: {0})
-    ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER = 0x52,    // empty queue or trying to remove unknown timer id (code location {0})
-    ERR_PUSH_LOWER_LAYER = 0x53,                // failed to push to lower layer
-    ERR_INVALID_PARAM = 0x54,                   // received an invalid parameter
-    ERR_COPY_TO_SPKT = 0x55,                    // copy packet content to small packet (pkt len {} < max len {})
-    ERR_COPY_TO_BPKT = 0x56,                    // copy packet content to big packet (pkt len {} > max len {})
-    ERR_INIT_FAILURE = 0x57,                    // module initialization failure (failed to set callback {0})
+    ERR_BUFFER_OVERFLOW = 0x45,                 // buffer overflow detected (code location {0})
+    ERR_BUSY_SENDING = 0x46,                    // busy sending
+    ERR_UNEXPECTED_SENDDONE = 0x47,             // sendDone for packet I didn't send
+    ERR_NO_FREE_PACKET_BUFFER = 0x48,           // no free packet buffer (code location {0})
+    ERR_NO_FREE_TIMER = 0x49,                   // no free timer (code location {0})
+    ERR_FREEING_UNUSED = 0x4a,                  // freeing unused memory
+    ERR_FREEING_ERROR = 0x4b,                   // freeing memory unsupported memory
+    ERR_MSG_UNKNOWN_TYPE = 0x4c,                // unknown message type {0}
+    ERR_WRONG_ADDR_TYPE = 0x4d,                 // wrong address type {0} (code location {1})
+    ERR_PACKET_TOO_LONG = 0x4e,                 // total packet size is too long, length {0} (adding {1} bytes)
+    ERR_PACKET_TOO_SHORT = 0x4f,                // total packet size is too short, length {0} (removing {1} bytes)
+    ERR_INPUTBUFFER_LENGTH = 0x50,              // input length problem, length={0}
+    ERR_BOOTED = 0x51,                          // booted
+    ERR_MAXRETRIES_REACHED = 0x52,              // maxretries reached (counter: {0})
+    ERR_EMPTY_QUEUE_OR_UNKNOWN_TIMER = 0x53,    // empty queue or trying to remove unknown timer id (code location {0})
+    ERR_PUSH_LOWER_LAYER = 0x54,                // failed to push to lower layer
+    ERR_INVALID_PARAM = 0x55,                   // received an invalid parameter
+    ERR_COPY_TO_SPKT = 0x56,                    // copy packet content to small packet (pkt len {} < max len {})
+    ERR_COPY_TO_BPKT = 0x57,                    // copy packet content to big packet (pkt len {} > max len {})
+    ERR_INIT_FAILURE = 0x58,                    // module initialization failure (failed to set callback {0})
 };
 
 //=========================== typedef =========================================
@@ -339,13 +340,13 @@ typedef struct {
     int16_t length;                                            // length in bytes of the payload
     // l7
 #if DEADLINE_OPTION
-    uint16_t      max_delay;                                   // Max delay in milliseconds before which the packet should be delivered to the receiver
-    bool          orgination_time_flag;
-    bool          drop_flag;
+    uint16_t max_delay;                                        // Max delay in milliseconds before which the packet should be delivered to the receiver
+    bool orgination_time_flag;
+    bool drop_flag;
 #endif
     bool is_cjoin_response;
 #if OPENWSN_6LO_FRAGMENTATION_C
-    bool          is_big_packet;
+    bool is_big_packet;
 #endif
 
     // l4
@@ -362,7 +363,7 @@ typedef struct {
     bool l3_useSourceRouting;                                  // TRUE when the packet goes downstream
 
 #if OPENWSN_6LO_FRAGMENTATION_C
-    bool         l3_isFragment;
+    bool l3_isFragment;
 #endif
     // l2
     owerror_t l2_sendDoneError;                                // outcome of trying to send this packet
@@ -403,7 +404,7 @@ typedef struct {
     uint8_t l1_lqi;                                            // LQI of received packet
     bool l1_crc;                                               // did received packet pass CRC check?
     // the packet
-    uint8_t packet[1 + 1 + 125 + 2 + 1];                       // 1B spi address, 1B length, 125B data, 2B CRC, 1B LQI
+    uint8_t packet[IEEE802154_FRAME_SIZE];                     // 125B data, 2B CRC, 1B LQI
 } OpenQueueEntry_t;
 
 
@@ -411,7 +412,7 @@ typedef struct {
 typedef struct {
     OpenQueueEntry_t standard_entry;
     // 130 bytes alread allocated in the normal OpenQueueEntry
-    uint8_t packet_remainder[IPV6_PACKET_SIZE - 130];
+    uint8_t packet_remainder[IPV6_PACKET_SIZE - IEEE802154_FRAME_SIZE];
 } OpenQueueBigEntry_t;
 #endif
 
