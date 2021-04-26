@@ -418,6 +418,8 @@ void coap_receive(OpenQueueEntry_t *msg) {
             securityReturnCode = COAP_CODE_RESP_METHODNOTALLOWED;
         }
 
+        msg->owner = COMPONENT_OPENCOAP;
+
         if (temp_desc->securityContext != NULL) {
             coap_outgoingOptions[coap_outgoingOptionsLen++].type = COAP_OPTION_NUM_OSCORE;
             if (coap_outgoingOptionsLen > MAX_COAP_OPTIONS) {
@@ -948,7 +950,7 @@ void coap_sock_handler(sock_udp_t *sock, sock_async_flags_t type, void *arg) {
     sock_udp_ep_t remote;
     sock_udp_ep_t local;
     int16_t res;
-    uint16_t footer_length;
+    int16_t footer_length;
     OpenQueueEntry_t *msg;
 
     if (type & SOCK_ASYNC_MSG_RECV) {
@@ -998,7 +1000,10 @@ void coap_sock_handler(sock_udp_t *sock, sock_async_flags_t type, void *arg) {
             coap_receive(msg);
         }
     } else if (type & SOCK_ASYNC_MSG_SENT) {
-        msg = openqueue_getPacketByComponent(COMPONENT_OPENCOAP);
+        if ((msg = openqueue_getPacketByComponent(COMPONENT_OPENCOAP)) == NULL) {
+            LOG_CRITICAL(COMPONENT_OPENCOAP, ERR_UNEXPECTED_NULL, (errorparameter_t) 0, (errorparameter_t) 0);
+            return;
+        }
         coap_sendDone(msg, *(owerror_t *) arg);
     }
 }

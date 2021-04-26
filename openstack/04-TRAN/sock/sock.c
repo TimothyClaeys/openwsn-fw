@@ -238,7 +238,7 @@ void sock_receive_internal(void* arg) {
     pkt = openqueue_getPacketByComponent(COMPONENT_UDP_TO_SOCK);
 
     if (pkt == NULL) {
-        openserial_printf("found nothing\n");
+        openserial_printf("Looking for UDP packet but found nothing\n");
 
         return;
     }
@@ -273,7 +273,7 @@ void sock_senddone_internal(OpenQueueEntry_t *msg, owerror_t error) {
     pkt = openqueue_getPacketByComponent(COMPONENT_UDP);
 
     if (pkt == NULL) {
-        openserial_printf("found nothing\n");
+        openserial_printf("Looking for UDP packet but found nothing\n");
 
         return;
     }

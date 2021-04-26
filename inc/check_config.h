@@ -48,18 +48,24 @@
 #error 'Illegal value for OPENWSN_IEEE802154E_SINGLE_CHANNEL'
 #endif
 
-#if !OPENWSN_COAP_C && (\
+#if !OPENWSN_COAP_C && ( \
     OPENWSN_C6T_C || \
     OPENWSN_CEXAMPLE_C || \
     OPENWSN_CINFO_C || \
     OPENWSN_CINFRARED_C || \
     OPENWSN_CLED_C || \
     OPENWSN_CSENSORS_C || \
-    OPENWSN_CSTORM_C || \
+    OPENWSN_CSTORM_C ||  \
     OPENWSN_CWELLKNOWN_C || \
+    OPENWSN_CJOIN_C || \
+    OPENWSN_CEDHOC_C ||\
     OPENWSN_RRT_C)
 
 #error "A CoAP dependent application is defined, but CoAP is not included in the build."
+#endif
+
+#if OPENWSN_CEDHOC_C && !OPENWSN_6LO_FRAGMENTATION_C
+#error "EDHOC requires 6LoWPAN fragmentation"
 #endif
 
 #if OPENWSN_CSENSORS_C && !BOARD_SENSORS_ENABLED
@@ -79,10 +85,6 @@
     MAX_PKTSIZE_SUPPORTED || \
     MAX_NUM_BIGPKTS)
 #error "6LoWPAN fragmentation options specified, but 6LoWPAN fragmentation is not included in the build."
-#endif
-
-#if OPENWSN_CJOIN_C && !OPENWSN_COAP_C
-#error "CJOIN requires the CoAP protocol."
 #endif
 
 #if OPENWSN_COAP_C && !(OPENWSN_UDP_C || OPENWSN_TCP_C)

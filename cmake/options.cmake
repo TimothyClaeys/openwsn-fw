@@ -94,6 +94,11 @@ if (OPT-CINFO)
     add_definitions(-DOPENWSN_CINFO_C)
 endif ()
 
+option(OPT-CEDHOC "" OFF)
+if (OPT-CEDHOC)
+    add_definitions(-DOPENWSN_CEDHOC_C)
+endif ()
+
 option(OPT-MSF "Enable the adaptive MSF functionality" OFF)
 if (OPT-MSF)
     add_definitions(-DADAPTIVE_MSF)

@@ -159,6 +159,7 @@ message(STATUS "DEFAULT COAP PORT:...........${DEFAULT_COAP_PORT}")
 # app settings
 message("\n*** OPENAPPS OPTIONS ***")
 message(STATUS "CJOIN:.......................${OPT-CJOIN}")
+message(STATUS "CEDHOC:......................${OPT-CEDHOC}")
 message(STATUS "CSTORM:......................${OPT-CSTORM}")
 message(STATUS "CEXAMPLE:....................${OPT-CEXAMPLE}")
 message(STATUS "CLED:........................${OPT-CLED}")

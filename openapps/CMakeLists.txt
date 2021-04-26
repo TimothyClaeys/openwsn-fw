@@ -44,6 +44,10 @@ if (OPT-CJOIN)
     target_sources(openapps PRIVATE cjoin/cjoin.c cjoin/cojp_cbor.c)
 endif ()
 
+if (OPT-CEDHOC)
+    target_sources(openapps PRIVATE cedhoc/cedhoc.c)
+endif ()
+
 
 target_compile_features(openapps PUBLIC c_std_99)
 target_include_directories(openapps
@@ -59,6 +63,7 @@ target_include_directories(openapps
         cexample
         cinfo
         rrt
+        cedhoc
         cwellknown
         cjoin)
 

@@ -200,6 +200,18 @@
 #define OPENWSN_CJOIN_C (0)
 #endif
 
+/**
+ * \def OPENWSN_CEDHOC_C
+ *
+ * The EDHOC protocol performs a key exchange to derive secrets for (OSCORE) encryption
+ *
+ * Requires: OPENWSN_UDP_C, OPENWSN_COAP_C
+ *
+ */
+#ifndef OPENWSN_CEDHOC_C
+#define OPENWSN_CEDHOC_C (0)
+#endif
+
 // ======================= OpenWeb configuration =======================
 
 /**

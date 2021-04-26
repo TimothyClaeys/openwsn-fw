@@ -188,6 +188,7 @@ enum {
     COMPONENT_UEXPIRATION = 0x2b,
     COMPONENT_UMONITOR = 0x2c,
     COMPONENT_CINFRARED = 0x2d,
+    COMPONENT_CEDHOC = 0x2e,
 };
 
 /**
@@ -277,7 +278,7 @@ enum {
     ERR_UNEXPECTED_SENDDONE = 0x47,             // sendDone for packet I didn't send
     ERR_NO_FREE_PACKET_BUFFER = 0x48,           // no free packet buffer (code location {0})
     ERR_NO_FREE_TIMER = 0x49,                   // no free timer (code location {0})
-    ERR_FREEING_UNUSED = 0x4a,                  // freeing unused memory
+    ERR_UNEXPECTED_NULL = 0x4a,                 // got an unexpected NULL pointer
     ERR_FREEING_ERROR = 0x4b,                   // freeing memory unsupported memory
     ERR_MSG_UNKNOWN_TYPE = 0x4c,                // unknown message type {0}
     ERR_WRONG_ADDR_TYPE = 0x4d,                 // wrong address type {0} (code location {1})

@@ -28,7 +28,9 @@ openqueueStatus_t openqueue_status_ctx;
 void openqueue_reset_entry(OpenQueueEntry_t *entry);
 
 #if OPENWSN_6LO_FRAGMENTATION_C
+
 void openqueue_reset_big_entry(OpenQueueBigEntry_t *entry);
+
 #endif
 
 static bool statusPrint_queue(void);
@@ -135,26 +137,25 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t *pkt) {
             if ((OpenQueueBigEntry_t *) pkt == &openqueue_vars.big_queue[i]) {
                 if (openqueue_vars.big_queue[i].standard_entry.owner == COMPONENT_NULL) {
                     // log the error
-                    LOG_CRITICAL(COMPONENT_OPENQUEUE, ERR_FREEING_UNUSED,(errorparameter_t) 0,(errorparameter_t) 0);
+                    LOG_CRITICAL(COMPONENT_OPENQUEUE, ERR_FREEING_ERROR, (errorparameter_t) 0, (errorparameter_t) 0);
                 }
 
-                openqueue_reset_big_entry((OpenQueueBigEntry_t *) pkt);
-                ENABLE_INTERRUPTS();
+                openqueue_reset_big_entry((OpenQueueBigEntry_t *) pkt);ENABLE_INTERRUPTS();
                 return E_SUCCESS;
             }
         }
     } else {
 #endif
-    for (i = 0; i < QUEUELENGTH; i++) {
-        if (&openqueue_vars.queue[i] == pkt) {
-            if (openqueue_vars.queue[i].owner == COMPONENT_NULL) {
-                // log the error
-                LOG_CRITICAL(COMPONENT_OPENQUEUE, ERR_FREEING_UNUSED, (errorparameter_t) 0, (errorparameter_t) 0);
+        for (i = 0; i < QUEUELENGTH; i++) {
+            if (&openqueue_vars.queue[i] == pkt) {
+                if (openqueue_vars.queue[i].owner == COMPONENT_NULL) {
+                    // log the error
+                    LOG_CRITICAL(COMPONENT_OPENQUEUE, ERR_FREEING_ERROR, (errorparameter_t) 0, (errorparameter_t) 0);
+                }
+                openqueue_reset_entry(&(openqueue_vars.queue[i]));ENABLE_INTERRUPTS();
+                return E_SUCCESS;
             }
-            openqueue_reset_entry(&(openqueue_vars.queue[i]));ENABLE_INTERRUPTS();
-            return E_SUCCESS;
         }
-    }
 #if OPENWSN_6LO_FRAGMENTATION_C
     }
 #endif
@@ -166,15 +167,14 @@ owerror_t openqueue_freePacketBuffer(OpenQueueEntry_t *pkt) {
 }
 
 #if OPENWSN_6LO_FRAGMENTATION_C
-OpenQueueEntry_t* openqueue_getFreeBigPacketBuffer(uint8_t creator) {
+
+OpenQueueEntry_t *openqueue_getFreeBigPacketBuffer(uint8_t creator) {
     uint8_t i;
 
-    INTERRUPT_DECLARATION();
-    DISABLE_INTERRUPTS();
+    INTERRUPT_DECLARATION();DISABLE_INTERRUPTS();
 
     // refuse to allocate if we're not in sync
-    if (ieee154e_isSynch() == FALSE) {
-        ENABLE_INTERRUPTS();
+    if (ieee154e_isSynch() == FALSE) { ENABLE_INTERRUPTS();
         return NULL;
     }
 
@@ -194,6 +194,7 @@ OpenQueueEntry_t* openqueue_getFreeBigPacketBuffer(uint8_t creator) {
     ENABLE_INTERRUPTS();
     return NULL;
 }
+
 #endif
 
 /**
@@ -236,10 +237,10 @@ OpenQueueEntry_t *openqueue_sixtopGetSentPacket() {
 
 #if OPENWSN_6LO_FRAGMENTATION_C
     for (i = 0; i < BIGQUEUELENGTH; i++) {
-        if (((OpenQueueEntry_t*)&openqueue_vars.big_queue[i])->owner == COMPONENT_IEEE802154E_TO_SIXTOP &&
-            ((OpenQueueEntry_t*)&openqueue_vars.big_queue[i])->creator != COMPONENT_IEEE802154E) {
-            ENABLE_INTERRUPTS();
-            return (OpenQueueEntry_t*)&openqueue_vars.big_queue[i];
+        if (((OpenQueueEntry_t *) &openqueue_vars.big_queue[i])->owner == COMPONENT_IEEE802154E_TO_SIXTOP &&
+            ((OpenQueueEntry_t *) &openqueue_vars.big_queue[i])->creator !=
+            COMPONENT_IEEE802154E) { ENABLE_INTERRUPTS();
+            return (OpenQueueEntry_t *) &openqueue_vars.big_queue[i];
         }
     }
 #endif
@@ -410,20 +411,42 @@ void openqueue_updateNextHopPayload(open_addr_t *newNextHop) {
 }
 
 OpenQueueEntry_t *openqueue_getPacketByComponent(uint8_t component) {
-    uint8_t i;INTERRUPT_DECLARATION();DISABLE_INTERRUPTS();
+    uint8_t i;
+
+    INTERRUPT_DECLARATION();
+
+    DISABLE_INTERRUPTS();
 
     for (i = 0; i < QUEUELENGTH; i++) {
-        if (openqueue_vars.queue[i].owner == component) { ENABLE_INTERRUPTS();
+        if (openqueue_vars.queue[i].owner == component) {
+
+            ENABLE_INTERRUPTS();
+
             return &openqueue_vars.queue[i];
         }
     }
+
+#if OPENWSN_6LO_FRAGMENTATION_C
+    for (i = 0; i < BIGQUEUELENGTH; i++) {
+        if (((OpenQueueEntry_t *) &openqueue_vars.big_queue[i])->owner == component) {
+
+            ENABLE_INTERRUPTS();
+
+            return (OpenQueueEntry_t *) &openqueue_vars.big_queue[i];
+        }
+    }
+#endif
 
     ENABLE_INTERRUPTS();
     return NULL;
 }
 
 OpenQueueEntry_t *openqueue_macGetUnicastPacket(open_addr_t *toNeighbor) {
-    uint8_t i;INTERRUPT_DECLARATION();DISABLE_INTERRUPTS();
+    uint8_t i;
+
+    INTERRUPT_DECLARATION();
+
+    DISABLE_INTERRUPTS();
 
     // first to look the sixtop RES packet
     for (i = 0; i < QUEUELENGTH; i++) {
@@ -456,14 +479,14 @@ OpenQueueEntry_t *openqueue_macGetUnicastPacket(open_addr_t *toNeighbor) {
 #if OPENWSN_6LO_FRAGMENTATION_C
     for (i = 0; i < BIGQUEUELENGTH; i++) {
         if (
-                ((OpenQueueEntry_t*)&openqueue_vars.big_queue[i])->owner == COMPONENT_SIXTOP_TO_IEEE802154E &&
+                ((OpenQueueEntry_t *) &openqueue_vars.big_queue[i])->owner == COMPONENT_SIXTOP_TO_IEEE802154E &&
                 (
                         toNeighbor->type == ADDR_64B &&
-                        packetfunctions_sameAddress(toNeighbor, &((OpenQueueEntry_t*)&openqueue_vars.big_queue[i])->l2_nextORpreviousHop)
+                        packetfunctions_sameAddress(toNeighbor,
+                                                    &((OpenQueueEntry_t *) &openqueue_vars.big_queue[i])->l2_nextORpreviousHop)
                 )
-                ) {
-            ENABLE_INTERRUPTS();
-            return (OpenQueueEntry_t*)&openqueue_vars.big_queue[i];
+                ) { ENABLE_INTERRUPTS();
+            return (OpenQueueEntry_t *) &openqueue_vars.big_queue[i];
         }
     }
 #endif
@@ -510,10 +533,12 @@ void openqueue_reset_entry(OpenQueueEntry_t *entry) {
 }
 
 #if OPENWSN_6LO_FRAGMENTATION_C
+
 void openqueue_reset_big_entry(OpenQueueBigEntry_t *entry) {
     openqueue_reset_entry(&(entry->standard_entry));
 
     // reset pointer to the end op the extended buffer
     entry->standard_entry.payload = &(entry->packet_remainder[IPV6_PACKET_SIZE - IEEE802154_FRAME_SIZE]);
 }
+
 #endif
